@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Optional
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
 
     # LLM Settings
-    OPENAI_API_KEY: Optional[str] = None
+    OPENAI_API_KEY: str | None = None
     OPENAI_BASE_URL: str = "https://api.openai.com/v1"
     MODEL_NAME: str = "gpt-4o-mini"
     EMBEDDING_MODEL: str = "text-embedding-3-small"
@@ -22,10 +22,10 @@ class Settings(BaseSettings):
     QDRANT_HOST: str = "localhost"
     QDRANT_PORT: int = 6333
     QDRANT_COLLECTION: str = "hanoi_legal_corpus"
-    QDRANT_API_KEY: Optional[str] = None
+    QDRANT_API_KEY: str | None = None
 
     # Database
-    DATABASE_URL: Optional[str] = None
+    DATABASE_URL: str | None = None
 
     # Agent constraints & parameters
     MAX_SUBQUERIES: int = 3

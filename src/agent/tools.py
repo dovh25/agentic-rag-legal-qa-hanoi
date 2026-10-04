@@ -1,13 +1,14 @@
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from src.core.logging import logger
 
 
 def retrieve_legal_documents(
     query: str,
-    as_of_date: Optional[str] = None,
-    district: Optional[str] = None,
+    as_of_date: str | None = None,
+    district: str | None = None,
     limit: int = 5,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Retrieve relevant legal chunks from Hanoi legal corpus (Qdrant / Hybrid).
 
     Args:
@@ -19,7 +20,9 @@ def retrieve_legal_documents(
     Returns:
         List of legal document chunks with metadata and score.
     """
-    logger.info(f"Retrieving legal docs for query='{query}', district='{district}', as_of_date='{as_of_date}'")
+    logger.info(
+        f"Retrieving legal docs for query='{query}', district='{district}', as_of_date='{as_of_date}'"
+    )
 
     # Placeholder logic - in production, queries Qdrant vector database with hybrid BM25 + dense
     return [
@@ -36,7 +39,7 @@ def retrieve_legal_documents(
     ]
 
 
-def check_document_validity(doc_id: str, as_of_date: Optional[str] = None) -> Dict[str, Any]:
+def check_document_validity(doc_id: str, as_of_date: str | None = None) -> dict[str, Any]:
     """Check legal document validity status as of a specified date.
 
     Args:

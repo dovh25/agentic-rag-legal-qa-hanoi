@@ -1,17 +1,20 @@
-from typing import Any, Dict, List
+from typing import Any
+
 from src.agent.state import AgentState
 from src.agent.tools import retrieve_legal_documents
-from src.core.logging import logger
 
 
-def router_node(state: AgentState) -> Dict[str, Any]:
+def router_node(state: AgentState) -> dict[str, Any]:
     """Classify the user query and decide routing strategy."""
     query = state.get("query", "").strip()
     steps = list(state.get("reasoning_steps", []))
     steps.append(f"Router analyzed query: '{query}'")
 
     # Simple heuristic routing (can be replaced by LLM classifier)
-    is_complex = any(keyword in query.lower() for keyword in ["và", "so sánh", "đồng thời", "quy trình", "bồi thường và tái định cư"])
+    is_complex = any(
+        keyword in query.lower()
+        for keyword in ["và", "so sánh", "đồng thời", "quy trình", "bồi thường và tái định cư"]
+    )
     is_ambiguous = len(query.split()) < 3
 
     if is_ambiguous:
@@ -30,7 +33,7 @@ def router_node(state: AgentState) -> Dict[str, Any]:
     }
 
 
-def planner_node(state: AgentState) -> Dict[str, Any]:
+def planner_node(state: AgentState) -> dict[str, Any]:
     """Decompose complex query into sub-queries."""
     query = state.get("query", "")
     steps = list(state.get("reasoning_steps", []))
@@ -48,14 +51,14 @@ def planner_node(state: AgentState) -> Dict[str, Any]:
     }
 
 
-def retrieval_node(state: AgentState) -> Dict[str, Any]:
+def retrieval_node(state: AgentState) -> dict[str, Any]:
     """Retrieve relevant legal documents based on query/sub-queries."""
     steps = list(state.get("reasoning_steps", []))
     as_of_date = state.get("as_of_date")
     district = state.get("district")
 
     queries_to_search = state.get("sub_queries") or [state.get("query", "")]
-    all_docs: List[Dict[str, Any]] = []
+    all_docs: list[dict[str, Any]] = []
 
     for q in queries_to_search:
         docs = retrieve_legal_documents(query=q, as_of_date=as_of_date, district=district)
@@ -68,7 +71,7 @@ def retrieval_node(state: AgentState) -> Dict[str, Any]:
     }
 
 
-def synthesize_node(state: AgentState) -> Dict[str, Any]:
+def synthesize_node(state: AgentState) -> dict[str, Any]:
     """Synthesize evidence into structured answer with citations."""
     steps = list(state.get("reasoning_steps", []))
     docs = state.get("retrieved_documents", [])
@@ -96,8 +99,7 @@ def synthesize_node(state: AgentState) -> Dict[str, Any]:
     ]
 
     answer = (
-        f"Căn cứ theo {docs[0]['title']}, {docs[0].get('article', '')}:\n"
-        f"{docs[0].get('text', '')}"
+        f"Căn cứ theo {docs[0]['title']}, {docs[0].get('article', '')}:\n{docs[0].get('text', '')}"
     )
 
     steps.append("Synthesized answer and generated citations from evidence.")
@@ -109,7 +111,7 @@ def synthesize_node(state: AgentState) -> Dict[str, Any]:
     }
 
 
-def verify_node(state: AgentState) -> Dict[str, Any]:
+def verify_node(state: AgentState) -> dict[str, Any]:
     """Verify citations and provenance against retrieved evidence."""
     steps = list(state.get("reasoning_steps", []))
     citations = state.get("citations", [])
@@ -127,7 +129,7 @@ def verify_node(state: AgentState) -> Dict[str, Any]:
     }
 
 
-def clarification_node(state: AgentState) -> Dict[str, Any]:
+def clarification_node(state: AgentState) -> dict[str, Any]:
     """Handle ambiguous queries by requesting user clarification."""
     steps = list(state.get("reasoning_steps", []))
     steps.append("Formulating clarification response.")

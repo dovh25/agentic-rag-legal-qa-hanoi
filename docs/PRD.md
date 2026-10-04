@@ -394,20 +394,20 @@ flowchart LR
 
 ```python
 class DocumentMetadata(BaseModel):
-    doc_id: str               # UUID duy nhất
-    title: str                # Tên văn bản đầy đủ
-    document_number: str      # Số hiệu: "45/2013/QH13"
-    document_type: str        # "luat" | "nghi_dinh" | "thong_tu" | "quyet_dinh"
-    issuing_body: str         # Cơ quan ban hành
-    issued_date: date         # Ngày ban hành
-    effective_date: date      # Ngày có hiệu lực
-    expiry_date: Optional[date]   # Ngày hết hiệu lực (None nếu còn hiệu lực)
-    replaced_by: Optional[str]    # Doc ID văn bản thay thế
-    legal_domain: List[str]   # ["dat_dai", "quy_hoach", "boi_thuong", "tai_dinh_cu"]
+    doc_id: str  # UUID duy nhất
+    title: str  # Tên văn bản đầy đủ
+    document_number: str  # Số hiệu: "45/2013/QH13"
+    document_type: str  # "luat" | "nghi_dinh" | "thong_tu" | "quyet_dinh"
+    issuing_body: str  # Cơ quan ban hành
+    issued_date: date  # Ngày ban hành
+    effective_date: date  # Ngày có hiệu lực
+    expiry_date: Optional[date]  # Ngày hết hiệu lực (None nếu còn hiệu lực)
+    replaced_by: Optional[str]  # Doc ID văn bản thay thế
+    legal_domain: List[str]  # ["dat_dai", "quy_hoach", "boi_thuong", "tai_dinh_cu"]
     applicable_district: Optional[List[str]]  # None = áp dụng toàn TP
-    source_url: str           # URL nguồn chính thức (Cổng VBPL)
-    chunk_index: int          # Thứ tự chunk trong văn bản
-    article_ref: str          # "Điều 3, Khoản 2"
+    source_url: str  # URL nguồn chính thức (Cổng VBPL)
+    chunk_index: int  # Thứ tự chunk trong văn bản
+    article_ref: str  # "Điều 3, Khoản 2"
     page_number: Optional[int]
 ```
 

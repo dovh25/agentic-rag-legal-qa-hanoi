@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LegalChunkPayload",
+  "type": "object",
+  "required": [
+    "doc_id",
+    "doc_number",
+    "doc_title",
+    "doc_type",
+    "issuing_body",
+    "effective_from",
+    "legal_status",
+    "scope",
+    "article",
+    "source_url",
+    "chunk_id"
+  ],
+  "properties": {
+    "doc_id": { "type": "string" },
+    "doc_number": { "type": "string" },
+    "doc_title": { "type": "string" },
+    "doc_type": { "type": "string", "enum": ["law", "decree", "decision", "resolution", "circular"] },
+    "issuing_body": { "type": "string" },
+    "effective_from": { "type": "string", "format": "date" },
+    "effective_to": { "type": ["string", "null"], "format": "date" },
+    "legal_status": { "type": "string", "enum": ["active", "superseded", "amended", "expired"] },
+    "scope": { "type": "string", "enum": ["national", "provincial", "district"] },
+    "administrative_area": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "chapter": { "type": ["string", "null"] },
+    "article": { "type": "string" },
+    "clause": { "type": ["string", "null"] },
+    "point": { "type": ["string", "null"] },
+    "source_url": { "type": "string", "format": "uri" },
+    "chunk_id": { "type": "string" },
+    "corpus_version": { "type": "string" }
+  }
+}

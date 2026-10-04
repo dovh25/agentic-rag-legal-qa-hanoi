@@ -1,7 +1,14 @@
 import json
+import sys
 from pathlib import Path
-from src.agent.graph import create_agent_graph
-from src.core.logging import logger
+
+# Add project root to sys.path for standalone script execution
+project_root = Path(__file__).resolve().parent.parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+from src.agent.graph import create_agent_graph  # noqa: E402
+from src.core.logging import logger  # noqa: E402
 
 
 def run_evaluation(dataset_path: str = "eval/datasets/sample_questions.jsonl"):
@@ -15,7 +22,7 @@ def run_evaluation(dataset_path: str = "eval/datasets/sample_questions.jsonl"):
     total = 0
     passed = 0
 
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         for line in f:
             if not line.strip():
                 continue

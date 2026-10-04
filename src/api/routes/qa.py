@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+
 from src.api.deps import get_agent_graph
 from src.core.logging import logger
 from src.models.schemas import LegalCitation, LegalQARequest, LegalQAResponse, ResponseStatus
@@ -27,16 +28,16 @@ async def ask_legal_question(
         # Invoke LangGraph agent
         final_state = agent_graph.invoke(initial_state)
 
-        citations = [
-            LegalCitation(**c) for c in final_state.get("citations", [])
-        ]
+        citations = [LegalCitation(**c) for c in final_state.get("citations", [])]
 
         return LegalQAResponse(
             query=request.query,
             status=ResponseStatus(final_state.get("status", ResponseStatus.ANSWERED)),
             answer=final_state.get("answer", ""),
             citations=citations,
-            reasoning_steps=final_state.get("reasoning_steps", []) if request.include_reasoning_steps else [],
+            reasoning_steps=final_state.get("reasoning_steps", [])
+            if request.include_reasoning_steps
+            else [],
             metadata={
                 "as_of_date": request.as_of_date,
                 "district": request.district,

@@ -30,7 +30,7 @@ test:
 	pytest tests/
 
 eval:
-	python eval/scripts/run_eval.py
+	python -m eval.scripts.run_eval
 
 docker-build:
 	docker build -t agentic-rag-legal-qa-hanoi:latest .

@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from src.api.routes.qa import router as qa_router
 from src.core.config import get_settings
 from src.core.logging import setup_logging
