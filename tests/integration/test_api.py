@@ -26,6 +26,31 @@ def test_ask_endpoint():
     response = client.post("/api/v1/qa/ask", json=payload)
     assert response.status_code == 200
     data = response.json()
-    assert "answer" in data
     assert "status" in data
     assert data["status"] in ["answered", "insufficient_evidence", "clarification_needed"]
+
+
+def test_canonical_query_endpoint():
+    payload = {
+        "query": "Hạn mức giao đất ở tại quận Cầu Giấy theo quy định mới?",
+        "district": "Cầu Giấy",
+        "as_of_date": "2024-08-01",
+        "max_results": 5,
+    }
+    response = client.post("/api/v1/query", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert "status" in data
+    assert "processing_time_ms" in data
+    assert data["status"] in ["answered", "insufficient_evidence", "clarification_needed"]
+
+
+def test_feedback_endpoint():
+    payload = {
+        "query_id": "test-uuid-1234",
+        "rating": "positive",
+        "comment": "Trích dẫn chính xác",
+    }
+    response = client.post("/api/v1/feedback", json=payload)
+    assert response.status_code == 200
+    assert response.json()["status"] == "success"

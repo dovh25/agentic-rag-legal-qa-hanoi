@@ -8,7 +8,7 @@ description: >-
 
 # Legal Corpus Ingestion Skill
 
-This skill provides step-by-step instructions for ingesting, validating, chunking, and indexing Vietnamese legal documents relating to land laws, planning, recovery, compensation, and resettlement in Hanoi.
+This skill provides step-by-step instructions for ingesting, validating, chunking, and indexing Vietnamese legal documents relating to land laws, planning, recovery, compensation, and resettlement in Hanoi, aligned with [docs/PRD.md](../../docs/PRD.md) and [docs/Brief.md](../../docs/Brief.md).
 
 ---
 
@@ -16,16 +16,23 @@ This skill provides step-by-step instructions for ingesting, validating, chunkin
 
 ### Official Sources
 Always download legal documents from verified government gazette repositories:
-- **National portal**: [vanban.chinhphu.vn](https://vanban.chinhphu.vn)
+- **National portal**: [vanban.chinhphu.vn](https://vanban.chinhphu.vn) or [vbpl.vn](https://vbpl.vn)
 - **Hanoi City Gazette**: [congbao.hanoi.gov.vn](https://congbao.hanoi.gov.vn)
 
-### Document Hierarchy
-1. **Luật (Laws)**: Luật Đất đai số 31/2024/QH15.
-2. **Nghị định (Decrees)**: Nghị định 88/2024/NĐ-CP, Nghị định 102/2024/NĐ-CP.
-3. **Thông tư (Circulars)**: Hướng dẫn thi hành của Bộ Tài nguyên và Môi trường / Bộ Tài chính.
-4. **Văn bản địa phương TP. Hà Nội**:
-   - Nghị quyết số 52/2025/NQ-HĐND (Bảng giá đất TP. Hà Nội).
-   - Quyết định số 61/2024/QĐ-UBND (Bồi thường, hỗ trợ, tái định cư trên địa bàn Hà Nội).
+### Corpus Tiers (PRD Section 4)
+1. **Tier P0 (Core / MVP Mandatory)**:
+   - Luật Đất đai số 31/2024/QH15.
+   - Nghị định số 88/2024/NĐ-CP (Bồi thường, hỗ trợ, tái định cư).
+   - Nghị định số 102/2024/NĐ-CP (Quy định chi tiết thi hành Luật Đất đai).
+   - Quyết định số 61/2024/QĐ-UBND TP. Hà Nội (Quy định chi tiết các nội dung bồi thường, hỗ trợ, TĐC tại Hà Nội).
+   - Nghị quyết số 52/2025/NQ-HĐND TP. Hà Nội (Bảng giá đất Hà Nội).
+2. **Tier P1 (Extended)**:
+   - Nghị định số 71/2024/NĐ-CP (Quy định về giá đất).
+   - Nghị định số 101/2024/NĐ-CP (Đăng ký, cấp Giấy chứng nhận quyền sử dụng đất).
+   - Thông tư số 10/2024/TT-BTNMT.
+3. **Tier P2 (Deep Specialization)**:
+   - Văn bản hướng dẫn nghiệp vụ của Bộ Tài nguyên & Môi trường.
+   - Án lệ và quyết định giải quyết tranh chấp đất đai tại Hà Nội.
 
 ---
 
@@ -46,25 +53,30 @@ Do not use arbitrary token chunking (e.g. fixed 500 characters) on legal texts, 
 
 ---
 
-## 3. Metadata Extraction Schema
+## 3. Metadata Extraction Schema (PRD Section 8.1)
 
 Every indexed chunk in Qdrant must contain the following payload metadata:
 
 ```json
 {
   "doc_id": "uuid-v4",
-  "doc_number": "31/2024/QH15",
-  "doc_title": "Luật Đất đai năm 2024",
-  "doc_type": "law",
+  "document_title": "Luật Đất đai năm 2024",
+  "document_number": "31/2024/QH15",
+  "document_type": "luat",
   "issuing_body": "Quốc hội",
-  "effective_from": "2024-08-01",
-  "effective_to": null,
+  "issued_date": "2024-01-18",
+  "effective_date": "2024-08-01",
+  "expiry_date": null,
+  "replaced_by": null,
   "legal_status": "active",
+  "legal_domain": ["dat_dai", "quy_hoach", "boi_thuong", "tai_dinh_cu"],
+  "applicable_district": null,
   "scope": "national",
   "administrative_area": ["Toàn quốc", "Hà Nội"],
   "chapter": "VI",
-  "article": "79",
-  "clause": "1",
+  "article_ref": "Điều 79",
+  "clause": "Khoản 1",
+  "chunk_index": 12,
   "source_url": "https://vanban.chinhphu.vn/?classid=1&docid=211189",
   "chunk_id": "31-2024-QH15-d79-k1",
   "corpus_version": "2026-10-04.1"
@@ -82,7 +94,7 @@ Collection name: `legal_chunks`
 | **Dense Vector Dimension** | 1024 (`BAAI/bge-m3`) |
 | **Distance Metric** | Cosine |
 | **Sparse Vector** | BM25 / Lexical weights |
-| **Payload Indexed Fields** | `legal_status` (keyword), `doc_number` (keyword), `article` (keyword), `administrative_area` (keyword), `effective_from` (datetime/integer) |
+| **Payload Indexed Fields** | `legal_status` (keyword), `document_number` (keyword), `article_ref` (keyword), `administrative_area` (keyword), `effective_date` (datetime/integer) |
 
 ### Verification Command
 Verify Qdrant is active and healthy:

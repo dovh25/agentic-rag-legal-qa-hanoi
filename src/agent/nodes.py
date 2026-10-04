@@ -88,12 +88,14 @@ def synthesize_node(state: AgentState) -> dict[str, Any]:
     citations = [
         {
             "doc_id": doc["doc_id"],
-            "title": doc["title"],
-            "article": doc.get("article"),
+            "document_title": doc["title"],
+            "document_number": doc.get("doc_number", doc["doc_id"]),
+            "article_ref": doc.get("article"),
             "clause": doc.get("clause"),
             "snippet": doc.get("text", "")[:150],
             "source_url": doc.get("source_url"),
             "effective_date": doc.get("effective_date"),
+            "relevance_score": doc.get("score", 0.95),
         }
         for doc in docs
     ]
@@ -134,8 +136,15 @@ def clarification_node(state: AgentState) -> dict[str, Any]:
     steps = list(state.get("reasoning_steps", []))
     steps.append("Formulating clarification response.")
 
+    clarification_msg = (
+        "Câu hỏi của bạn chưa đủ thông tin cụ thể (ví dụ: loại đất nông nghiệp hay đất ở, "
+        "địa bàn quận/huyện cụ thể tại Hà Nội, hoặc thời điểm áp dụng). "
+        "Vui lòng cung cấp thêm thông tin để hệ thống tra cứu chính xác."
+    )
+
     return {
-        "answer": "Câu hỏi của bạn chưa đủ thông tin cụ thể (ví dụ: loại đất, địa bàn quận/huyện tại Hà Nội, thời điểm áp dụng). Vui lòng cung cấp thêm chi tiết để hệ thống tra cứu chính xác.",
+        "answer": None,
+        "clarification_question": clarification_msg,
         "citations": [],
         "status": "clarification_needed",
         "reasoning_steps": steps,
