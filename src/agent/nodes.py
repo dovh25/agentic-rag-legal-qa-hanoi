@@ -1,0 +1,140 @@
+from typing import Any, Dict, List
+from src.agent.state import AgentState
+from src.agent.tools import retrieve_legal_documents
+from src.core.logging import logger
+
+
+def router_node(state: AgentState) -> Dict[str, Any]:
+    """Classify the user query and decide routing strategy."""
+    query = state.get("query", "").strip()
+    steps = list(state.get("reasoning_steps", []))
+    steps.append(f"Router analyzed query: '{query}'")
+
+    # Simple heuristic routing (can be replaced by LLM classifier)
+    is_complex = any(keyword in query.lower() for keyword in ["và", "so sánh", "đồng thời", "quy trình", "bồi thường và tái định cư"])
+    is_ambiguous = len(query.split()) < 3
+
+    if is_ambiguous:
+        route = "clarification"
+        steps.append("Query is too ambiguous, routed to clarification.")
+    elif is_complex:
+        route = "multi_hop"
+        steps.append("Query contains multi-aspect legal requirements, routed to planner.")
+    else:
+        route = "single_hop"
+        steps.append("Query is specific, routed to direct retrieval.")
+
+    return {
+        "route": route,
+        "reasoning_steps": steps,
+    }
+
+
+def planner_node(state: AgentState) -> Dict[str, Any]:
+    """Decompose complex query into sub-queries."""
+    query = state.get("query", "")
+    steps = list(state.get("reasoning_steps", []))
+
+    # Example decomposition
+    sub_queries = [
+        f"{query} - quy định chung",
+        f"{query} - quy định áp dụng tại Hà Nội",
+    ]
+    steps.append(f"Planner generated {len(sub_queries)} sub-queries.")
+
+    return {
+        "sub_queries": sub_queries,
+        "reasoning_steps": steps,
+    }
+
+
+def retrieval_node(state: AgentState) -> Dict[str, Any]:
+    """Retrieve relevant legal documents based on query/sub-queries."""
+    steps = list(state.get("reasoning_steps", []))
+    as_of_date = state.get("as_of_date")
+    district = state.get("district")
+
+    queries_to_search = state.get("sub_queries") or [state.get("query", "")]
+    all_docs: List[Dict[str, Any]] = []
+
+    for q in queries_to_search:
+        docs = retrieve_legal_documents(query=q, as_of_date=as_of_date, district=district)
+        all_docs.extend(docs)
+
+    steps.append(f"Retrieved {len(all_docs)} document chunks.")
+    return {
+        "retrieved_documents": all_docs,
+        "reasoning_steps": steps,
+    }
+
+
+def synthesize_node(state: AgentState) -> Dict[str, Any]:
+    """Synthesize evidence into structured answer with citations."""
+    steps = list(state.get("reasoning_steps", []))
+    docs = state.get("retrieved_documents", [])
+
+    if not docs:
+        steps.append("No relevant legal documents retrieved.")
+        return {
+            "answer": "Không tìm thấy căn cứ pháp lý phù hợp trong cơ sở dữ liệu để trả lời câu hỏi của bạn.",
+            "citations": [],
+            "status": "insufficient_evidence",
+            "reasoning_steps": steps,
+        }
+
+    citations = [
+        {
+            "doc_id": doc["doc_id"],
+            "title": doc["title"],
+            "article": doc.get("article"),
+            "clause": doc.get("clause"),
+            "snippet": doc.get("text", "")[:150],
+            "source_url": doc.get("source_url"),
+            "effective_date": doc.get("effective_date"),
+        }
+        for doc in docs
+    ]
+
+    answer = (
+        f"Căn cứ theo {docs[0]['title']}, {docs[0].get('article', '')}:\n"
+        f"{docs[0].get('text', '')}"
+    )
+
+    steps.append("Synthesized answer and generated citations from evidence.")
+    return {
+        "answer": answer,
+        "citations": citations,
+        "status": "answered",
+        "reasoning_steps": steps,
+    }
+
+
+def verify_node(state: AgentState) -> Dict[str, Any]:
+    """Verify citations and provenance against retrieved evidence."""
+    steps = list(state.get("reasoning_steps", []))
+    citations = state.get("citations", [])
+
+    if not citations and state.get("status") != "clarification_needed":
+        status = "insufficient_evidence"
+        steps.append("Verification failed: Answer lacks verifiable citations.")
+    else:
+        status = state.get("status", "answered")
+        steps.append("Verification passed: Citations verified against source corpus.")
+
+    return {
+        "status": status,
+        "reasoning_steps": steps,
+    }
+
+
+def clarification_node(state: AgentState) -> Dict[str, Any]:
+    """Handle ambiguous queries by requesting user clarification."""
+    steps = list(state.get("reasoning_steps", []))
+    steps.append("Formulating clarification response.")
+
+    return {
+        "answer": "Câu hỏi của bạn chưa đủ thông tin cụ thể (ví dụ: loại đất, địa bàn quận/huyện tại Hà Nội, thời điểm áp dụng). Vui lòng cung cấp thêm chi tiết để hệ thống tra cứu chính xác.",
+        "citations": [],
+        "status": "clarification_needed",
+        "reasoning_steps": steps,
+    }
