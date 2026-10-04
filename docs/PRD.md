@@ -568,43 +568,43 @@ Một feature được coi là Done khi:
 gantt
     title Agentic RAG Legal QA — 3-Week Sprint Roadmap
     dateFormat  YYYY-MM-DD
-    section Tuần 1 — Foundation & Agent Core
-    Project setup & config           :done,    w1a, 2026-10-05, 1d
-    Qdrant schema + Docker setup     :done,    w1b, 2026-10-05, 1d
-    Ingestion pipeline (PDF→chunks)  :active,  w1c, 2026-10-06, 2d
-    Ingest corpus P0 (Luật 2024, NĐ 71) :      w1d, 2026-10-07, 2d
-    Router node (LLM classification) :         w1e, 2026-10-08, 1d
-    Retriever node (Qdrant + filter) :         w1f, 2026-10-08, 2d
-    Grader node (relevance check)    :         w1g, 2026-10-09, 1d
-    Generator node (citation prompt) :         w1h, 2026-10-09, 2d
+    section Tuần 1 — Foundation & Agent Core (28/09 - 04/10)
+    Project setup & config           :done,    w1a, 2026-09-28, 1d
+    Qdrant schema + Cloud setup      :done,    w1b, 2026-09-28, 1d
+    Ingestion pipeline & Parser      :done,    w1c, 2026-09-29, 2d
+    Ingest corpus P0 (5 văn bản)     :done,    w1d, 2026-09-30, 2d
+    Router node (intent & district)  :done,    w1e, 2026-10-01, 1d
+    Retriever node (Hybrid Qdrant)   :done,    w1f, 2026-10-01, 2d
+    Grader node (relevance check)    :done,    w1g, 2026-10-02, 1d
+    Synthesizer node (LLM + fallback):done,    w1h, 2026-10-02, 2d
 
-    section Tuần 2 — MVP Complete
-    Planner node (multi-hop)         :         w2a, 2026-10-12, 2d
-    Clarifier node                   :         w2b, 2026-10-13, 1d
-    LangGraph graph assembly         :         w2c, 2026-10-13, 1d
-    FastAPI endpoint + OpenAPI docs  :         w2d, 2026-10-14, 1d
-    as_of_date temporal filter       :         w2e, 2026-10-14, 1d
-    Ingest corpus P1                 :         w2f, 2026-10-15, 1d
-    Chat UI (web frontend)           :         w2g, 2026-10-15, 2d
-    MVP Smoke test & bug fix         :crit,    w2h, 2026-10-16, 1d
+    section Tuần 2 — MVP Complete (05/10 - 11/10)
+    Planner node (multi-hop)         :         w2a, 2026-10-05, 2d
+    Clarifier node                   :         w2b, 2026-10-06, 1d
+    LangGraph graph assembly         :         w2c, 2026-10-06, 1d
+    FastAPI endpoint + OpenAPI docs  :         w2d, 2026-10-07, 1d
+    as_of_date temporal filter       :         w2e, 2026-10-07, 1d
+    Ingest corpus P1                 :         w2f, 2026-10-08, 1d
+    Chat UI (web frontend Next.js)   :         w2g, 2026-10-08, 2d
+    MVP Smoke test & bug fix         :crit,    w2h, 2026-10-09, 1d
 
-    section Tuần 3 — Evaluation & Demo
-    RAGAS eval pipeline              :         w3a, 2026-10-19, 2d
-    Golden set 50 câu hỏi           :         w3b, 2026-10-19, 2d
-    Load testing (k6)                :         w3c, 2026-10-21, 1d
-    Security audit (prompt injection):         w3d, 2026-10-21, 1d
-    Ingest corpus P2                 :         w3e, 2026-10-22, 1d
-    Documentation hoàn chỉnh        :         w3f, 2026-10-22, 1d
-    Presentation & Demo Day          :crit,    w3g, 2026-10-23, 1d
+    section Tuần 3 — Evaluation & Demo (12/10 - 18/10)
+    RAGAS eval pipeline              :         w3a, 2026-10-12, 2d
+    Golden set 50 câu hỏi           :         w3b, 2026-10-12, 2d
+    Load testing (k6)                :         w3c, 2026-10-14, 1d
+    Security audit (prompt injection):         w3d, 2026-10-14, 1d
+    Ingest corpus P2                 :         w3e, 2026-10-15, 1d
+    Documentation hoàn chỉnh        :         w3f, 2026-10-15, 1d
+    Presentation & Demo Day          :crit,    w3g, 2026-10-16, 1d
 ```
 
 ### 13.2 Milestones
 
 | Milestone | Ngày | Deliverable |
 |---|---|---|
-| **M1** | Cuối Tuần 1 | Ingestion pipeline hoạt động, corpus P0 indexed, các agent nodes cơ bản xong |
-| **M2 — MVP** | Cuối Tuần 2 | Full LangGraph agent + FastAPI + Chat UI — có thể demo được |
-| **M3 — Done** | Cuối Tuần 3 | RAGAS eval pass, load test pass, documentation, Demo Day |
+| **M1** | Cuối Tuần 1 (04/10/2026) | Ingestion pipeline hoạt động, corpus P0 indexed, các agent nodes cơ bản xong (Hoàn thành) |
+| **M2 — MVP** | Cuối Tuần 2 (11/10/2026) | Full LangGraph agent + FastAPI + Chat UI — có thể demo được |
+| **M3 — Done** | Cuối Tuần 3 (18/10/2026) | RAGAS eval pass, load test pass, documentation, Demo Day |
 
 ### 13.3 Phase Chi tiết
 

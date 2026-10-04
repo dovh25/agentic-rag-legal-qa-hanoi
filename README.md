@@ -218,24 +218,24 @@ Toàn bộ văn bản được phân đoạn theo đơn vị **Khoản / Điều
 gantt
     title Agentic RAG Legal QA — 3-Week Sprint Roadmap
     dateFormat  YYYY-MM-DD
-    section Tuần 1: Foundation & Agent Core
-    Project Setup & Qdrant Store     :done,    w1_1, 2026-10-05, 1d
-    Ingestion Pipeline & Parser      :done,    w1_2, 2026-10-05, 2d
-    Đánh chỉ mục Corpus P0           :done,    w1_3, 2026-10-07, 2d
-    Router, Retriever, Grader Core   :done,    w1_4, 2026-10-08, 3d
+    section Tuần 1: Foundation & Agent Core (28/09 - 04/10)
+    Project Setup & Qdrant Store     :done,    w1_1, 2026-09-28, 1d
+    Ingestion Pipeline & Parser      :done,    w1_2, 2026-09-28, 2d
+    Đánh chỉ mục Corpus P0           :done,    w1_3, 2026-09-30, 2d
+    Router, Retriever, Grader Core   :done,    w1_4, 2026-10-01, 3d
 
-    section Tuần 2: MVP Complete
-    Planner Node (Multi-hop)         :         w2_1, 2026-10-12, 2d
-    Clarifier & Temporal Filter      :         w2_2, 2026-10-13, 2d
-    Lắp ráp LangGraph + API Routes   :         w2_3, 2026-10-14, 2d
-    Web Chat UI (Next.js)            :         w2_4, 2026-10-15, 2d
-    MVP Smoke Test                   :crit,    w2_5, 2026-10-16, 1d
+    section Tuần 2: MVP Complete (05/10 - 11/10)
+    Planner Node (Multi-hop)         :         w2_1, 2026-10-05, 2d
+    Clarifier & Temporal Filter      :         w2_2, 2026-10-06, 2d
+    Lắp ráp LangGraph + API Routes   :         w2_3, 2026-10-07, 2d
+    Web Chat UI (Next.js)            :         w2_4, 2026-10-08, 2d
+    MVP Smoke Test                   :crit,    w2_5, 2026-10-09, 1d
 
-    section Tuần 3: Evaluation & Demo
-    RAGAS Eval Pipeline & Golden Set :         w3_1, 2026-10-19, 3d
-    Load Test k6 & Security Audit    :         w3_2, 2026-10-21, 2d
-    Corpus P1 & Hoàn thiện Docs      :         w3_3, 2026-10-22, 1d
-    Presentation & Demo Day          :crit,    w3_4, 2026-10-23, 1d
+    section Tuần 3: Evaluation & Demo (12/10 - 18/10)
+    RAGAS Eval Pipeline & Golden Set :         w3_1, 2026-10-12, 3d
+    Load Test k6 & Security Audit    :         w3_2, 2026-10-14, 2d
+    Corpus P1 & Hoàn thiện Docs      :         w3_3, 2026-10-15, 1d
+    Presentation & Demo Day          :crit,    w3_4, 2026-10-16, 1d
 ```
 
 ---

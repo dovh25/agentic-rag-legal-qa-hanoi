@@ -146,28 +146,28 @@ gantt
     dateFormat  YYYY-MM-DD
     axisFormat  %d/%m
 
-    section Tuần 1
-    Setup & Ingestion Pipeline   :done,    t1a, 2026-10-05, 2d
-    Corpus P0 Indexed            :active,  t1b, 2026-10-07, 2d
-    Agent Nodes (Router→Generator):        t1c, 2026-10-08, 3d
+    section Tuần 1 (28/09 - 04/10)
+    Setup & Ingestion Pipeline   :done,    t1a, 2026-09-28, 2d
+    Corpus P0 Indexed            :done,    t1b, 2026-09-30, 2d
+    Agent Nodes (Router→Generator):done,   t1c, 2026-10-01, 3d
 
-    section Tuần 2 — MVP
-    Planner + Clarifier Nodes    :         t2a, 2026-10-12, 2d
-    LangGraph Assembly + FastAPI :         t2b, 2026-10-13, 2d
-    Chat UI (Next.js)            :         t2c, 2026-10-15, 2d
-    MVP Smoke Test               :crit,    t2d, 2026-10-16, 1d
+    section Tuần 2 — MVP (05/10 - 11/10)
+    Planner + Clarifier Nodes    :         t2a, 2026-10-05, 2d
+    LangGraph Assembly + FastAPI :         t2b, 2026-10-06, 2d
+    Chat UI (Next.js)            :         t2c, 2026-10-08, 2d
+    MVP Smoke Test               :crit,    t2d, 2026-10-09, 1d
 
-    section Tuần 3 — Eval & Demo
-    RAGAS Eval + Golden Set      :         t3a, 2026-10-19, 3d
-    Load Test + Security Audit   :         t3b, 2026-10-21, 2d
-    Documentation + Demo Day     :crit,    t3c, 2026-10-23, 1d
+    section Tuần 3 — Eval & Demo (12/10 - 18/10)
+    RAGAS Eval + Golden Set      :         t3a, 2026-10-12, 3d
+    Load Test + Security Audit   :         t3b, 2026-10-14, 2d
+    Documentation + Demo Day     :crit,    t3c, 2026-10-16, 1d
 ```
 
 | Milestone | Ngày mục tiêu | Deliverable |
 |---|---|---|
-| **M1** | Cuối Tuần 1 | Ingestion pipeline + corpus P0 + agent nodes cơ bản |
-| **M2 — MVP** | Cuối Tuần 2 | Full agent + FastAPI + Chat UI — demo được |
-| **M3 — Done** | Cuối Tuần 3 | Eval pass + documentation + Demo Day |
+| **M1** | Cuối Tuần 1 (04/10/2026) | Ingestion pipeline + corpus P0 + agent nodes cơ bản (Hoàn thành) |
+| **M2 — MVP** | Cuối Tuần 2 (11/10/2026) | Full agent + FastAPI + Chat UI — demo được |
+| **M3 — Done** | Cuối Tuần 3 (18/10/2026) | Eval pass + documentation + Demo Day |
 
 ---
 
