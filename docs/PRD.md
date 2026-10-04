@@ -330,8 +330,8 @@ graph TB
     end
 
     subgraph INFRA["INFRASTRUCTURE"]
-        QDRANT[("Qdrant\nhanoi_legal_corpus")]
-        LLM["OpenAI\nGPT-4o-mini\ntext-embedding-3-small"]
+        QDRANT[("Qdrant (Cloud/Local)\nlegal_chunks")]
+        LLM["Google Gemini API\n(gemini-3.8-flash)\nBAAI/bge-m3 (1024 dims)"]
     end
 
     UI & API_C -->|HTTPS/JSON| FA
@@ -367,12 +367,11 @@ stateDiagram-v2
 
 ```mermaid
 flowchart LR
-    A["PDF/DOCX\ngốc"] --> B["PDF Parser\n(pdfplumber)"]
-    B --> C["Text Cleaner\n(chuẩn hóa encoding\nxóa header/footer)"]
-    C --> D["Structural Splitter\n(Điều / Khoản / Điểm\nregex tiếng Việt)"]
-    D --> E["Chunk Sizer\n512 tokens\noverlap 64"]
-    E --> F["Embedder\ntext-embedding-3-small\n1536 dims"]
-    F --> G[("Qdrant Upsert\nvector + payload\nmetadata")]
+    A["Cổng VBPL / Công báo\n(HTML/Text)"] --> B["Parser\n(Chương/Điều/Khoản)"]
+    B --> C["Text Cleaner\n(chuẩn hóa encoding\nloại bỏ nhiễu)"]
+    C --> D["Breadcrumb Chunker\n([Văn bản] > [Chương]\n> [Điều] > [Khoản])"]
+    D --> E["Embedder\nBAAI/bge-m3\n1024 dims + BM25"]
+    E --> F[("Qdrant Upsert\nlegal_chunks\nvector + payload index")]
 ```
 
 ### 8.4 Mô tả từng Node
@@ -415,14 +414,16 @@ class DocumentMetadata(BaseModel):
 
 | Ưu tiên | Văn bản | Số hiệu | Lĩnh vực |
 |---|---|---|---|
-| P0 | Luật Đất đai | 31/2024/QH15 | Đất đai tổng quát |
-| P0 | NĐ hướng dẫn bồi thường, TĐC | 71/2024/NĐ-CP | Bồi thường, TĐC |
-| P0 | NĐ quy hoạch sử dụng đất | 102/2024/NĐ-CP | Quy hoạch |
-| P1 | NĐ đăng ký đất đai | 101/2024/NĐ-CP | Đăng ký |
-| P1 | NĐ tài chính đất đai | 103/2024/NĐ-CP | Tài chính |
-| P1 | Luật Nhà ở | 27/2023/QH15 | Nhà ở liên quan |
-| P2 | Quyết định bảng giá đất Hà Nội | UBND TP HN | Bồi thường cụ thể |
-| P2 | Quy hoạch Thủ đô | Nghị quyết QH | Quy hoạch Hà Nội |
+| P0 (Bắt buộc) | Luật Đất đai 2024 | 31/2024/QH15 | Đất đai tổng quát |
+| P0 (Bắt buộc) | NĐ bồi thường, hỗ trợ, tái định cư | 88/2024/NĐ-CP | Bồi thường, hỗ trợ, TĐC |
+| P0 (Bắt buộc) | NĐ quy định chi tiết thi hành Luật Đất đai | 102/2024/NĐ-CP | Quy định thi hành |
+| P0 (Bắt buộc) | QĐ quy định bồi thường, hỗ trợ, TĐC Hà Nội | 61/2024/QĐ-UBND | Cơ chế đặc thù Hà Nội |
+| P0 (Bắt buộc) | NQ ban hành Bảng giá đất TP. Hà Nội | 52/2025/NQ-HĐND | Bảng giá đất Hà Nội |
+| P1 (Mở rộng) | NĐ quy định về giá đất | 71/2024/NĐ-CP | Giá đất trung ương |
+| P1 (Mở rộng) | NĐ đăng ký đất đai, cấp GCN | 101/2024/NĐ-CP | Đăng ký đất đai |
+| P1 (Mở rộng) | TT quy định hồ sơ địa chính, GCN | 10/2024/TT-BTNMT | Thủ tục địa chính |
+| P2 (Chuyên sâu)| Văn bản hướng dẫn nghiệp vụ Bộ TN&MT | Công văn / Hướng dẫn | Tháo gỡ vướng mắc |
+| P2 (Chuyên sâu)| Án lệ tranh chấp đất đai tại Hà Nội | TAND Tối cao / TAND HN | Thực tiễn xét xử |
 
 ---
 
@@ -467,7 +468,7 @@ class DocumentMetadata(BaseModel):
   "route": "single_hop",
   "sub_queries": [],
   "processing_time_ms": 3240,
-  "model": "gpt-4o-mini",
+  "model": "gemini-3.8-flash",
   "as_of_date_applied": "2024-08-01"
 }
 ```
@@ -550,7 +551,7 @@ Một feature được coi là Done khi:
 | LLM hallucinate trích dẫn pháp lý | Cao | Nghiêm trọng | Grader node + strict system prompt + `insufficient_evidence` |
 | Văn bản pháp luật thay đổi, corpus lỗi thời | Cao | Cao | Cập nhật corpus định kỳ, metadata `expiry_date` |
 | Latency cao khi multi-hop | Trung bình | Trung bình | Cache, streaming response, giới hạn sub_queries=3 |
-| Chi phí LLM vượt ngân sách | Trung bình | Trung bình | Rate limiting, budget alert, dùng gpt-4o-mini |
+| Chi phí LLM & Embedding | Thấp | Cao | Sử dụng Google Gemini (gemini-3.8-flash Free Tier) kết hợp BGE-M3 local (0 VNĐ) |
 | Người dùng tin tuyệt đối vào AI | Cao | Nghiêm trọng | Disclaimer rõ ràng, badge "Hỗ trợ tra cứu – Không phải tư vấn pháp lý" |
 | Corpus chứa văn bản scan OCR kém | Trung bình | Cao | OCR quality check, manual review trước ingest |
 | Qdrant downtime | Thấp | Cao | Containerized + health check + fallback message |
@@ -607,13 +608,14 @@ gantt
 
 ### 13.3 Phase Chi tiết
 
-**Tuần 1 — Foundation & Agent Core**
+**Tuần 1 — Foundation & Agent Core** (Đã hoàn thành - 100%)
 - [x] Khởi tạo project structure (DONE)
-- [ ] Core config & logging setup
-- [ ] Qdrant Docker setup + schema definition
-- [ ] Document ingestion pipeline (PDF → chunks → Qdrant)
-- [ ] Ingest corpus P0 (Luật Đất đai 2024, NĐ 71, NĐ 102)
-- [ ] Router node, Retriever node, Grader node, Generator node
+- [x] Core config & logging setup (Loguru JSON structured logging)
+- [x] Qdrant Cloud setup + schema definition (`legal_chunks` 1024-dim Cosine, payload indexes)
+- [x] Document ingestion pipeline (Automated crawler, hierarchical parser, breadcrumb chunker)
+- [x] Ingest corpus P0 (81 chunks: Luật 31/2024, NĐ 88/2024, NĐ 102/2024, QĐ 61/2024 Hà Nội, NQ 52/2025 Hà Nội)
+- [x] Core Agent nodes (Router, Hybrid Retriever, Grader, Synthesize LLM + fallback, Verify, Clarify)
+- [x] Test suite passing: 18/18 pytest (unit & integration), 5/5 eval benchmark
 
 **Tuần 2 — MVP Complete**
 - [ ] Planner node (sub-query decomposition)
@@ -645,7 +647,7 @@ gantt
 | Python | 3.11+ | Runtime |
 | FastAPI | >= 0.111 | API framework |
 | LangGraph | >= 0.2 | Agent orchestration |
-| langchain-openai | >= 0.1 | OpenAI integration |
+| langchain-openai | >= 0.1 | OpenAI SDK protocol integration (Google Gemini endpoint) |
 | Qdrant Client | >= 1.9 | Vector store |
 | Pydantic | >= 2.7 | Data validation |
 | Loguru | >= 0.7 | Logging |

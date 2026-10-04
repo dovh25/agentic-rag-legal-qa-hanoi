@@ -38,7 +38,7 @@ flowchart LR
     Q["Câu hỏi\ntiếng Việt"] --> A["LangGraph\nAgent"]
     A --> R["Phân tích\n& Route"]
     R --> S["Truy xuất\nQdrant"]
-    S --> G["Tổng hợp\nGPT-4o-mini"]
+    S --> G["Tổng hợp\nGemini-3.8-flash"]
     G --> ANS["Câu trả lời\n+ Trích dẫn\n+ URL nguồn"]
 ```
 
@@ -114,7 +114,7 @@ flowchart LR
 
 ### Rủi ro cần theo dõi
 - Chất lượng OCR của văn bản PDF scan → ảnh hưởng retrieval recall
-- Thay đổi chính sách OpenAI (pricing, rate limit, model deprecation)
+- Thay đổi chính sách/hạn mức Google Gemini API (Free Tier rate limit, quota)
 - Văn bản pháp luật mới ban hành chưa có trong corpus → cần quy trình cập nhật
 
 ---
@@ -183,7 +183,7 @@ gantt
 ### NO-GO nếu:
 - [ ] Hallucination rate > 5% trong manual audit
 - [ ] Corpus chất lượng quá thấp (OCR error rate > 20%)
-- [ ] OpenAI API không khả dụng hoặc chi phí vượt ngân sách
+- [ ] Google Gemini API / Qdrant không khả dụng hoặc vượt hạn mức quota
 
 ---
 
