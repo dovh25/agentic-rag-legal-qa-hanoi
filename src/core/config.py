@@ -14,11 +14,12 @@ class Settings(BaseSettings):
 
     # LLM Settings
     OPENAI_API_KEY: str | None = None
-    OPENAI_BASE_URL: str = "https://api.openai.com/v1"
-    MODEL_NAME: str = "gpt-4o-mini"
-    EMBEDDING_MODEL: str = "text-embedding-3-small"
+    OPENAI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
+    MODEL_NAME: str = "gemini-3.8-flash"
+    EMBEDDING_MODEL: str = "text-embedding-004"
 
     # Vector Database (Qdrant)
+    QDRANT_URL: str | None = None
     QDRANT_HOST: str = "localhost"
     QDRANT_PORT: int = 6333
     QDRANT_COLLECTION: str = "legal_chunks"

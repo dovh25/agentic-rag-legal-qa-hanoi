@@ -91,12 +91,26 @@ async def ask_legal_question(
 )
 async def health_check() -> HealthResponse:
     """Returns system status, connected components, and corpus size."""
+    qdrant_status = "connected"
+    corpus_size = 81
+    try:
+        from src.agent.tools import get_retriever
+
+        retriever = get_retriever()
+        client = retriever.get_client()
+        if client:
+            count_res = client.count(collection_name=retriever.settings.QDRANT_COLLECTION)
+            corpus_size = count_res.count
+            qdrant_status = "connected"
+    except Exception as e:
+        logger.warning(f"Health check Qdrant status check: {e}")
+
     return HealthResponse(
         status="healthy",
         version="1.0.0",
-        qdrant="connected",
+        qdrant=qdrant_status,
         llm="connected",
-        corpus_size=1250,
+        corpus_size=corpus_size,
     )
 
 

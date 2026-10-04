@@ -654,9 +654,9 @@ gantt
 
 | Service | Vai trò | Fallback |
 |---|---|---|
-| Google Gemini API | LLM inference (gemini-2.5-flash qua OpenAI protocol) | Groq / Ollama |
+| Google Gemini API | LLM inference (gemini-3.8-flash qua OpenAI protocol) | Groq / Ollama |
 | BAAI/bge-m3 | Dense 1024-dim + Sparse BM25 Embedding (Local) | text-embedding-004 |
-| Qdrant Self-hosted | Vector store (Docker container: `legal_chunks`) | Qdrant Cloud |
+| Qdrant Vector DB | Vector store (Qdrant Cloud / Docker: `legal_chunks`) | Local matcher |
 | Cổng VBPL / Công báo Hà Nội | Nguồn văn bản gốc cào tự động | Lưu offline snapshot |
 
 ### 14.3 Constraints

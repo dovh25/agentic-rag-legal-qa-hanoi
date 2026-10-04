@@ -16,11 +16,11 @@ Các node trong Agentic RAG (`router_node`, `planner_node`, `grader_node`, `synt
 5. Khả năng tích hợp liền mạch với codebase hiện tại (đang sử dụng thư viện `langchain-openai`).
 
 ## 2. Quyết định (Decision)
-Dự án quyết định chọn **Google Gemini API** với mô hình **`gemini-2.5-flash`** (hoặc `gemini-1.5-flash` fallback) thông qua giao thức tương thích OpenAI (**OpenAI-compatible endpoint**):
+Dự án quyết định chọn **Google Gemini API** với mô hình **`gemini-3.8-flash`** (hoặc `gemini-2.0-flash` / cơ chế grounded deterministic fallback) thông qua giao thức tương thích OpenAI (**OpenAI-compatible endpoint**):
 - **Base URL**: `https://generativelanguage.googleapis.com/v1beta/openai/`
-- **Mô hình chính**: `gemini-2.5-flash`
+- **Mô hình chính**: `gemini-3.8-flash`
 - **Nhà cung cấp**: Google AI Studio (Free Tier)
-- **Phương thức gọi**: Sử dụng trực tiếp `langchain-openai` (`ChatOpenAI`) trỏ `base_url` về Google Gemini endpoint mà không cần sửa đổi cấu trúc core agent.
+- **Phương thức gọi**: Sử dụng OpenAI client tương thích trỏ `base_url` về Google Gemini endpoint với cơ chế fallback tự động đảm bảo tính liên tục của hệ thống.
 
 ## 3. Các phương án đã cân nhắc (Alternatives Considered)
 

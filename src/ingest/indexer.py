@@ -13,24 +13,41 @@ class QdrantLegalIndexer:
 
     def __init__(
         self,
+        url: str | None = None,
         host: str | None = None,
         port: int | None = None,
+        api_key: str | None = None,
         collection_name: str | None = None,
         vector_dim: int = 1024,
     ):
         settings = get_settings()
+        self.url = url or settings.QDRANT_URL
         self.host = host or settings.QDRANT_HOST
         self.port = port or settings.QDRANT_PORT
+        self.api_key = api_key or settings.QDRANT_API_KEY
         self.collection_name = collection_name or settings.QDRANT_COLLECTION
         self.vector_dim = vector_dim
         self.client: QdrantClient | None = None
 
     def connect(self) -> QdrantClient:
-        """Establish connection with Qdrant server."""
+        """Establish connection with Qdrant server (cloud or local)."""
         if not self.client:
-            self.client = QdrantClient(
-                host=self.host, port=self.port, timeout=10.0, check_compatibility=False
-            )
+            if self.url or (self.host and self.host.startswith("http")):
+                endpoint = self.url or self.host
+                self.client = QdrantClient(
+                    url=endpoint,
+                    api_key=self.api_key,
+                    timeout=10.0,
+                    check_compatibility=False,
+                )
+            else:
+                self.client = QdrantClient(
+                    host=self.host,
+                    port=self.port,
+                    api_key=self.api_key,
+                    timeout=10.0,
+                    check_compatibility=False,
+                )
         return self.client
 
     def ensure_collection(self) -> bool:
@@ -53,6 +70,7 @@ class QdrantLegalIndexer:
 
                 # Create Payload Indexes for fast metadata filtering (ADR-0004)
                 for field_name in [
+                    "doc_id",
                     "legal_status",
                     "document_number",
                     "article_ref",

@@ -18,8 +18,8 @@ Dự án quyết định chọn **Qdrant** làm Vector Database chính:
 - **Collection**: `legal_chunks`
 - **Dense Vector**: 1024-dim (`BAAI/bge-m3`), Cosine distance.
 - **Sparse Vector / Payload BM25**: Hỗ trợ tìm kiếm từ khóa chính xác điều khoản.
-- **Payload Index**: Đánh chỉ mục trường `legal_status`, `document_number`, `article_ref`, `administrative_area`, `effective_date`.
-- **Triển khai**: Container hóa qua Docker Compose (`qdrant/qdrant:latest`), mount dữ liệu local.
+- **Payload Index**: Đánh chỉ mục trường `doc_id`, `legal_status`, `document_number`, `article_ref`, `administrative_area`, `effective_date`.
+- **Triển khai**: Hỗ trợ linh hoạt cả Qdrant Cloud Cluster (quản lý qua `QDRANT_URL` và `QDRANT_API_KEY`) hoặc Container hóa qua Docker Compose (`qdrant/qdrant:latest`).
 
 ## 3. Các phương án đã cân nhắc (Alternatives Considered)
 

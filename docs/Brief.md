@@ -91,9 +91,9 @@ flowchart LR
 | Layer | Công nghệ |
 |---|---|
 | **Agent Orchestration** | LangGraph 0.2+ |
-| **LLM** | Google Gemini (gemini-2.5-flash qua OpenAI-compatible endpoint) |
+| **LLM** | Google Gemini (gemini-3.8-flash qua OpenAI-compatible endpoint) |
 | **Embedding** | BAAI/bge-m3 (1024 dims dense + BM25 sparse weights) |
-| **Vector Store** | Qdrant (Docker local / collection: legal_chunks) |
+| **Vector Store** | Qdrant (Qdrant Cloud / Docker local / collection: legal_chunks) |
 | **Data Ingestion** | Automated Crawler & Parser (vanban.chinhphu.vn, congbao.hanoi.gov.vn) |
 | **API** | FastAPI + Uvicorn |
 | **Data Validation** | Pydantic v2 |

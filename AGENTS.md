@@ -47,7 +47,7 @@ Hệ thống Agentic RAG chuyên sâu phục vụ tra cứu, diễn giải và �
 ## 3. Technology Stack & Directory Structure
 
 - **Ngôn ngữ & Runtime**: Python 3.11+
-- **LLM Inference Engine**: Google Gemini API (`gemini-2.5-flash` qua OpenAI-compatible protocol - Free Tier)
+- **LLM Inference Engine**: Google Gemini API (`gemini-3.8-flash` qua OpenAI-compatible protocol - Free Tier)
 - **Embedding Model**: `BAAI/bge-m3` (1024-dim dense + BM25 sparse lexical weights - Local/Free)
 - **API Framework**: FastAPI, Pydantic v2, Uvicorn
 - **Agent Orchestration**: LangGraph 0.2+, LangChain Core

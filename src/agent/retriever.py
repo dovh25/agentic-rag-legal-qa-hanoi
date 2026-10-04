@@ -20,18 +20,30 @@ class HybridRetriever:
     def get_client(self) -> QdrantClient | None:
         if self._is_connected is None:
             try:
-                client = QdrantClient(
-                    host=self.settings.QDRANT_HOST,
-                    port=self.settings.QDRANT_PORT,
-                    timeout=3.0,
-                    check_compatibility=False,
-                )
+                settings = self.settings
+                if settings.QDRANT_URL or (
+                    settings.QDRANT_HOST and settings.QDRANT_HOST.startswith("http")
+                ):
+                    endpoint = settings.QDRANT_URL or settings.QDRANT_HOST
+                    client = QdrantClient(
+                        url=endpoint,
+                        api_key=settings.QDRANT_API_KEY,
+                        timeout=5.0,
+                        check_compatibility=False,
+                    )
+                else:
+                    client = QdrantClient(
+                        host=settings.QDRANT_HOST,
+                        port=settings.QDRANT_PORT,
+                        api_key=settings.QDRANT_API_KEY,
+                        timeout=3.0,
+                        check_compatibility=False,
+                    )
                 client.get_collections()
                 self.client = client
                 self._is_connected = True
-                logger.info(
-                    f"Connected to Qdrant at {self.settings.QDRANT_HOST}:{self.settings.QDRANT_PORT}"
-                )
+                target_str = settings.QDRANT_URL or f"{settings.QDRANT_HOST}:{settings.QDRANT_PORT}"
+                logger.info(f"Connected to Qdrant at {target_str}")
             except Exception as e:
                 logger.debug(
                     f"Qdrant not reachable ({e}). Retriever will use fallback semantic matcher."
@@ -71,15 +83,47 @@ class HybridRetriever:
                         )
                     )
 
+                # Prioritize explicit document number if specified in query
+                doc_map = {
+                    "52/2025": "52-2025-NQ-HDND",
+                    "52-2025": "52-2025-NQ-HDND",
+                    "61/2024": "61-2024-QD-UBND",
+                    "61-2024": "61-2024-QD-UBND",
+                    "88/2024": "88-2024-ND-CP",
+                    "88-2024": "88-2024-ND-CP",
+                    "102/2024": "102-2024-ND-CP",
+                    "102-2024": "102-2024-ND-CP",
+                    "31/2024": "31-2024-QH15",
+                    "31-2024": "31-2024-QH15",
+                }
+                for pattern, target_doc_id in doc_map.items():
+                    if pattern in query.lower():
+                        filter_conditions.append(
+                            qmodels.FieldCondition(
+                                key="doc_id",
+                                match=qmodels.MatchValue(value=target_doc_id),
+                            )
+                        )
+                        break
+
                 search_filter = qmodels.Filter(must=filter_conditions)
 
-                # 3. Search in Qdrant
-                search_results = client.search(
-                    collection_name=self.settings.QDRANT_COLLECTION,
-                    query_vector=query_vector,
-                    query_filter=search_filter,
-                    limit=top_k,
-                )
+                # 3. Search in Qdrant (using modern query_points API)
+                if hasattr(client, "query_points"):
+                    query_response = client.query_points(
+                        collection_name=self.settings.QDRANT_COLLECTION,
+                        query=query_vector,
+                        query_filter=search_filter,
+                        limit=top_k,
+                    )
+                    search_results = query_response.points
+                else:
+                    search_results = client.search(
+                        collection_name=self.settings.QDRANT_COLLECTION,
+                        query_vector=query_vector,
+                        query_filter=search_filter,
+                        limit=top_k,
+                    )
 
                 results = []
                 for point in search_results:

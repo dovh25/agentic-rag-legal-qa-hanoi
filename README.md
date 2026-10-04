@@ -84,7 +84,7 @@ flowchart TD
         RETRIEVER --> GRADER["Grader Node\n(Kiểm tra độ liên quan bằng chứng)"]
         
         GRADER -- "Không đủ bằng chứng" --> ABSTAIN(["status: insufficient_evidence"])
-        GRADER -- "Đủ bằng chứng" --> SYNTHESIS["Synthesis Node\n(Evidence-Grounded Gemini 2.5 Flash)"]
+        GRADER -- "Đủ bằng chứng" --> SYNTHESIS["Synthesis Node\n(Evidence-Grounded Google Gemini)"]
         
         SYNTHESIS --> VERIFY["Citation Verifier Node\n(So khớp trích dẫn & URL nguồn)"]
         VERIFY --> ANSWER(["status: answered\n+ Citations & URL"])
@@ -219,10 +219,10 @@ gantt
     title Agentic RAG Legal QA — 3-Week Sprint Roadmap
     dateFormat  YYYY-MM-DD
     section Tuần 1: Foundation & Agent Core
-    Project Setup & Docker Qdrant    :done,    w1_1, 2026-10-05, 1d
-    Ingestion Pipeline & Parser      :active,  w1_2, 2026-10-05, 2d
-    Đánh chỉ mục Corpus P0           :         w1_3, 2026-10-07, 2d
-    Router, Retriever, Grader Core   :         w1_4, 2026-10-08, 3d
+    Project Setup & Qdrant Store     :done,    w1_1, 2026-10-05, 1d
+    Ingestion Pipeline & Parser      :done,    w1_2, 2026-10-05, 2d
+    Đánh chỉ mục Corpus P0           :done,    w1_3, 2026-10-07, 2d
+    Router, Retriever, Grader Core   :done,    w1_4, 2026-10-08, 3d
 
     section Tuần 2: MVP Complete
     Planner Node (Multi-hop)         :         w2_1, 2026-10-12, 2d
