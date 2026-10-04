@@ -1,0 +1,126 @@
+[
+  {
+    "doc_id": "31-2024-QH15",
+    "document_number": "31/2024/QH15",
+    "document_title": "Luật Đất đai số 31/2024/QH15",
+    "document_type": "luat",
+    "issuing_body": "Quốc hội",
+    "issued_date": "2024-01-18",
+    "effective_date": "2024-08-01",
+    "expiry_date": null,
+    "source_url": "https://vanban.chinhphu.vn/?classid=1&docid=211189",
+    "administrative_area": [
+      "Toàn quốc",
+      "Hà Nội"
+    ],
+    "legal_domain": [
+      "dat_dai",
+      "quy_hoach",
+      "boi_thuong",
+      "tai_dinh_cu"
+    ],
+    "status": "verified_seed",
+    "sha256": "0606c0e4ad4524f307cf38456afbf0cd5c88562a200fbff3b65ba2b98aff5963",
+    "raw_html_path": "data/corpus/raw/31-2024-QH15.html",
+    "clean_text_path": "data/corpus/raw/31-2024-QH15.txt",
+    "character_count": 9206
+  },
+  {
+    "doc_id": "88-2024-ND-CP",
+    "document_number": "88/2024/NĐ-CP",
+    "document_title": "Nghị định số 88/2024/NĐ-CP quy định về bồi thường, hỗ trợ, tái định cư khi Nhà nước thu hồi đất",
+    "document_type": "nghi_dinh",
+    "issuing_body": "Chính phủ",
+    "issued_date": "2024-07-15",
+    "effective_date": "2024-08-01",
+    "expiry_date": null,
+    "source_url": "https://vanban.chinhphu.vn/?classid=0&docid=210658",
+    "administrative_area": [
+      "Toàn quốc",
+      "Hà Nội"
+    ],
+    "legal_domain": [
+      "boi_thuong",
+      "ho_tro",
+      "tai_dinh_cu"
+    ],
+    "status": "verified_seed",
+    "sha256": "083fcaf3f2c3044045d25717703bd2d228a4045f068064335230f55d5f58ed03",
+    "raw_html_path": "data/corpus/raw/88-2024-ND-CP.html",
+    "clean_text_path": "data/corpus/raw/88-2024-ND-CP.txt",
+    "character_count": 3749
+  },
+  {
+    "doc_id": "102-2024-ND-CP",
+    "document_number": "102/2024/NĐ-CP",
+    "document_title": "Nghị định số 102/2024/NĐ-CP quy định chi tiết thi hành một số điều của Luật Đất đai",
+    "document_type": "nghi_dinh",
+    "issuing_body": "Chính phủ",
+    "issued_date": "2024-07-30",
+    "effective_date": "2024-08-01",
+    "expiry_date": null,
+    "source_url": "https://vanban.chinhphu.vn/?classid=0&docid=210672",
+    "administrative_area": [
+      "Toàn quốc",
+      "Hà Nội"
+    ],
+    "legal_domain": [
+      "dat_dai",
+      "thi_hanh"
+    ],
+    "status": "verified_seed",
+    "sha256": "b597bf34f66e1c57e501b64a40f0b77f6454737ce634d184b009c9ba79e7478f",
+    "raw_html_path": "data/corpus/raw/102-2024-ND-CP.html",
+    "clean_text_path": "data/corpus/raw/102-2024-ND-CP.txt",
+    "character_count": 1357
+  },
+  {
+    "doc_id": "61-2024-QD-UBND",
+    "document_number": "61/2024/QĐ-UBND",
+    "document_title": "Quyết định số 61/2024/QĐ-UBND của UBND TP. Hà Nội quy định cụ thể một số nội dung bồi thường, hỗ trợ, tái định cư",
+    "document_type": "quyet_dinh",
+    "issuing_body": "Ủy ban nhân dân TP. Hà Nội",
+    "issued_date": "2024-09-27",
+    "effective_date": "2024-10-07",
+    "expiry_date": null,
+    "source_url": "https://congbao.hanoi.gov.vn/",
+    "administrative_area": [
+      "Hà Nội"
+    ],
+    "legal_domain": [
+      "boi_thuong",
+      "ho_tro",
+      "tai_dinh_cu",
+      "ha_noi"
+    ],
+    "status": "verified_seed",
+    "sha256": "48f5c02e125bf104509eeaa0228ac9bc1a22c00c68481063e021ad6a68096518",
+    "raw_html_path": "data/corpus/raw/61-2024-QD-UBND.html",
+    "clean_text_path": "data/corpus/raw/61-2024-QD-UBND.txt",
+    "character_count": 3073
+  },
+  {
+    "doc_id": "52-2025-NQ-HDND",
+    "document_number": "52/2025/NQ-HĐND",
+    "document_title": "Nghị quyết số 52/2025/NQ-HĐND của HĐND TP. Hà Nội ban hành Bảng giá đất áp dụng trên địa bàn thành phố Hà Nội",
+    "document_type": "nghi_quyet",
+    "issuing_body": "Hội đồng nhân dân TP. Hà Nội",
+    "issued_date": "2025-12-10",
+    "effective_date": "2026-01-01",
+    "expiry_date": null,
+    "source_url": "https://congbao.hanoi.gov.vn/Default.aspx?p_attribute=5054&pageid=45002",
+    "administrative_area": [
+      "Hà Nội"
+    ],
+    "legal_domain": [
+      "gia_dat",
+      "bang_gia_dat",
+      "ha_noi"
+    ],
+    "status": "verified_seed",
+    "sha256": "c5b7d1e0674dfd99d8649c0fdfd764657f6b027338ddbf7d53957d896514a479",
+    "raw_html_path": "data/corpus/raw/52-2025-NQ-HDND.html",
+    "clean_text_path": "data/corpus/raw/52-2025-NQ-HDND.txt",
+    "character_count": 2511
+  }
+]

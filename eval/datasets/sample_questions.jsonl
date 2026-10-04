@@ -1,2 +1,5 @@
-{"id": "qa-001", "query": "Quy định về thu hồi đất để phát triển kinh tế xã hội tại Hà Nội theo Luật Đất đai 2024?", "expected_status": "answered", "expected_doc_ids": ["Luat-Dat-dai-2024"]}
+{"id": "qa-001", "query": "Quy định về thu hồi đất để phát triển kinh tế xã hội tại Hà Nội theo Luật Đất đai 2024?", "expected_status": "answered", "expected_doc_ids": ["31-2024-QH15"]}
 {"id": "qa-002", "query": "đất nông nghiệp", "expected_status": "clarification_needed", "expected_doc_ids": []}
+{"id": "qa-003", "query": "Hạn mức giao đất ở tái định cư tại thành phố Hà Nội theo Quyết định 61/2024/QĐ-UBND?", "expected_status": "answered", "expected_doc_ids": ["61-2024-QD-UBND"]}
+{"id": "qa-004", "query": "Bảng giá đất tại quận Ba Đình theo Nghị quyết số 52/2025/NQ-HĐND?", "expected_status": "answered", "expected_doc_ids": ["52-2025-NQ-HDND"]}
+{"id": "qa-005", "query": "Cách làm bánh chưng truyền thống ngày tết", "expected_status": "insufficient_evidence", "expected_doc_ids": []}

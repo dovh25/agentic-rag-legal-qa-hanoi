@@ -61,7 +61,13 @@ htmlcov/
 # Databases & Local Data
 *.db
 *.sqlite3
-data/
+data/*
+!data/corpus/
+data/corpus/*
+!data/corpus/seed/
+!data/corpus/raw/
+data/corpus/raw/*
+!data/corpus/raw/manifest.json
 qdrant_storage/
 
 # Logs
