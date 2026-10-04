@@ -47,9 +47,13 @@ Hệ thống Agentic RAG chuyên sâu phục vụ tra cứu, diễn giải và �
 ## 3. Technology Stack & Directory Structure
 
 - **Ngôn ngữ & Runtime**: Python 3.11+
+- **LLM Inference Engine**: Google Gemini API (`gemini-2.5-flash` qua OpenAI-compatible protocol - Free Tier)
+- **Embedding Model**: `BAAI/bge-m3` (1024-dim dense + BM25 sparse lexical weights - Local/Free)
 - **API Framework**: FastAPI, Pydantic v2, Uvicorn
 - **Agent Orchestration**: LangGraph 0.2+, LangChain Core
-- **Vector Store & Hybrid Retrieval**: Qdrant (dense 1024-dim BGE-M3 + BM25 sparse lexical search + HNSW cosine)
+- **Vector Store & Hybrid Retrieval**: Qdrant (collection: `legal_chunks`, HNSW cosine, payload indexes)
+- **Data Acquisition**: Automated Crawler từ Cổng VBPL Chính phủ & Công báo Hà Nội
+- **Architecture Decisions**: Tài liệu hóa chi tiết tại `docs/adr/` (ADR-0001 đến ADR-0004)
 - **Frontend Specification**: React / Next.js theo [docs/Wireframe_UI_Flow.md](docs/Wireframe_UI_Flow.md) (Palette: Deep Navy `#1B4F72`, Accent Orange `#E67E22`)
 - **Code Quality & Formatting**: Ruff (line-length = 88, py311), Pytest (unit, integration, eval)
 - **Infrastructure**: Docker, Docker Compose

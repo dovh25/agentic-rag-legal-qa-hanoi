@@ -91,9 +91,10 @@ flowchart LR
 | Layer | Công nghệ |
 |---|---|
 | **Agent Orchestration** | LangGraph 0.2+ |
-| **LLM** | GPT-4o-mini (inference) |
-| **Embedding** | text-embedding-3-small (1536 dims) |
-| **Vector Store** | Qdrant (self-hosted / cloud) |
+| **LLM** | Google Gemini (gemini-2.5-flash qua OpenAI-compatible endpoint) |
+| **Embedding** | BAAI/bge-m3 (1024 dims dense + BM25 sparse weights) |
+| **Vector Store** | Qdrant (Docker local / collection: legal_chunks) |
+| **Data Ingestion** | Automated Crawler & Parser (vanban.chinhphu.vn, congbao.hanoi.gov.vn) |
 | **API** | FastAPI + Uvicorn |
 | **Data Validation** | Pydantic v2 |
 | **Logging** | Loguru (JSON structured) |
@@ -106,8 +107,8 @@ flowchart LR
 ## Giả định & Phụ thuộc (Assumptions & Dependencies)
 
 ### Giả định
-- Văn bản P0 (Luật Đất đai 2024 + NĐ 71, 102/2024) sẵn có ở định dạng text/PDF chất lượng tốt
-- OpenAI API key được cung cấp và có quota đủ cho dev + eval
+- Văn bản P0 sẵn có trên Cổng thông tin Chính phủ và Công báo Hà Nội, cho phép crawl và parse tự động.
+- Gemini API key (Google AI Studio Free Tier) được cung cấp và cấu hình trong `.env`.
 - Qdrant có thể chạy local via Docker trong môi trường phát triển
 - Người dùng có kết nối internet ổn định để sử dụng web UI
 

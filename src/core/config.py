@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     # Vector Database (Qdrant)
     QDRANT_HOST: str = "localhost"
     QDRANT_PORT: int = 6333
-    QDRANT_COLLECTION: str = "hanoi_legal_corpus"
+    QDRANT_COLLECTION: str = "legal_chunks"
     QDRANT_API_KEY: str | None = None
 
     # Database

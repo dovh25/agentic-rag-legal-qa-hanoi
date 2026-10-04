@@ -84,7 +84,7 @@ flowchart TD
         RETRIEVER --> GRADER["Grader Node\n(Kiểm tra độ liên quan bằng chứng)"]
         
         GRADER -- "Không đủ bằng chứng" --> ABSTAIN(["status: insufficient_evidence"])
-        GRADER -- "Đủ bằng chứng" --> SYNTHESIS["Synthesis Node\n(Evidence-Grounded GPT-4o-mini)"]
+        GRADER -- "Đủ bằng chứng" --> SYNTHESIS["Synthesis Node\n(Evidence-Grounded Gemini 2.5 Flash)"]
         
         SYNTHESIS --> VERIFY["Citation Verifier Node\n(So khớp trích dẫn & URL nguồn)"]
         VERIFY --> ANSWER(["status: answered\n+ Citations & URL"])

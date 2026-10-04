@@ -14,10 +14,11 @@ This skill provides step-by-step instructions for ingesting, validating, chunkin
 
 ## 1. Document Sourcing & Hierarchy
 
-### Official Sources
-Always download legal documents from verified government gazette repositories:
-- **National portal**: [vanban.chinhphu.vn](https://vanban.chinhphu.vn) or [vbpl.vn](https://vbpl.vn)
-- **Hanoi City Gazette**: [congbao.hanoi.gov.vn](https://congbao.hanoi.gov.vn)
+### Official Sources & Automated Crawler (ADR-0003)
+Dữ liệu được tự động thu thập từ các cổng công báo điện tử chính thức qua module `src/ingest/crawler.py`:
+- **Cổng Thông tin điện tử Chính phủ / Cổng VBPL**: [vanban.chinhphu.vn](https://vanban.chinhphu.vn) hoặc [vbpl.vn](https://vbpl.vn)
+- **Công báo điện tử TP. Hà Nội**: [congbao.hanoi.gov.vn](https://congbao.hanoi.gov.vn)
+- Snapshot lưu trữ: `data/corpus/raw/{doc_id}.html` kèm SHA-256 checksum để đảm bảo tính toàn vẹn (Data Provenance).
 
 ### Corpus Tiers (PRD Section 4)
 1. **Tier P0 (Core / MVP Mandatory)**:

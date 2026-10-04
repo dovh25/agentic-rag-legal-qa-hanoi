@@ -654,14 +654,15 @@ gantt
 
 | Service | Vai trò | Fallback |
 |---|---|---|
-| OpenAI API | LLM inference + Embedding | Gemini / Ollama |
-| Qdrant Cloud / Self-hosted | Vector store | Local Qdrant via Docker |
-| Cổng VBPL (vbpl.vn) | Nguồn văn bản pháp luật gốc | Lưu offline PDF |
+| Google Gemini API | LLM inference (gemini-2.5-flash qua OpenAI protocol) | Groq / Ollama |
+| BAAI/bge-m3 | Dense 1024-dim + Sparse BM25 Embedding (Local) | text-embedding-004 |
+| Qdrant Self-hosted | Vector store (Docker container: `legal_chunks`) | Qdrant Cloud |
+| Cổng VBPL / Công báo Hà Nội | Nguồn văn bản gốc cào tự động | Lưu offline snapshot |
 
 ### 14.3 Constraints
 
-- Ngân sách LLM: ưu tiên gpt-4o-mini để kiểm soát chi phí
-- Corpus: chỉ sử dụng văn bản từ nguồn chính thức (VBPL, Cổng Chính phủ)
+- Ngân sách LLM & Embedding: 0 VNĐ (sử dụng 100% Free Tier qua Google Gemini & BAAI/bge-m3 local)
+- Corpus: chỉ sử dụng văn bản từ nguồn chính thức (Cổng Chính phủ, Công báo Hà Nội)
 - **Thời hạn: 3 tuần** từ ngày khởi động đến Demo Day
 - Đội ngũ: 1 developer (sinh viên)
 
