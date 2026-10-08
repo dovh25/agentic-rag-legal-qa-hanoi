@@ -1,7 +1,7 @@
 # Architecture Documentation — Agentic RAG Legal QA Hà Nội
 
 > Tài liệu đặc tả kiến trúc kỹ thuật hệ thống Hỏi đáp Pháp luật Đất đai & Quy hoạch TP. Hà Nội.  
-> Công nghệ cốt lõi: **LangGraph** · **Google Gemini API (gemini-3.8-flash)** · **Qdrant Vector DB** · **BAAI/bge-m3** · **FastAPI**
+> Công nghệ cốt lõi: **LangGraph** · **Google Gemini API (LLM và Embeddings)** · **Qdrant Vector DB** · **FastAPI**
 
 ---
 
@@ -42,16 +42,16 @@ graph TB
     end
 
     subgraph INFRASTRUCTURE["HẠ TẦNG LƯU TRỮ & MÔ HÌNH (STORAGE & MODELS)"]
-        QDRANT[("Qdrant Cloud / Docker\nCollection: legal_chunks\n1024-dim Cosine + Payload Indexes")]
+        QDRANT[("Qdrant Cloud / Docker\nVersioned collection\n768-dim Cosine + Payload Indexes")]
         GEMINI["Google Gemini API\n(gemini-3.8-flash qua OpenAI Protocol)"]
-        BGEM3["BAAI/bge-m3\n(Dense 1024-dim + BM25 Sparse Local)"]
+        EMBEDDINGS["Gemini Embedding API\n(gemini-embedding-001, 768-dim)"]
     end
 
     UI & EXT_APP -->|HTTP/JSON| FA
     FA --> ENDPOINTS --> AGENT_ENGINE
     RETRIEVER <-->|Vector & Lexical Search| QDRANT
     SYNTHESIZER <-->|LLM Inference| GEMINI
-    RETRIEVER & INGESTION <-->|Embedding| BGEM3
+    RETRIEVER & INGESTION <-->|Embedding API| EMBEDDINGS
 ```
 
 ---
@@ -88,7 +88,7 @@ stateDiagram-v2
 2. **`planner_node`**:
    - Phân rã câu hỏi so sánh/đa bước thành 2-3 câu hỏi con nguyên tử (sub-queries) để truy xuất toàn diện các khía cạnh pháp luật.
 3. **`retrieval_node`**:
-   - Gọi `HybridRetriever` thực thi tìm kiếm kết hợp Dense Vector (BGE-M3) và Lexical Search (BM25) trên collection `legal_chunks` của Qdrant.
+   - Gọi `HybridRetriever` thực thi dense retrieval (Gemini Embeddings) cùng lexical topic fallback và payload filters trên Qdrant.
    - Lọc metadata theo mốc hiệu lực thời gian `as_of_date` và địa bàn hành chính.
 4. **`grader_node`**:
    - Rà soát độ liên quan ngữ nghĩa và trường từ vựng pháp lý của các đoạn trích.
@@ -112,8 +112,8 @@ flowchart LR
     B --> C["Raw Snapshot & Checksum\n(data/corpus/raw/ + manifest.json)"]
     C --> D["Legislative Parser\n(Chương > Điều > Khoản > Điểm)"]
     D --> E["Contextual Breadcrumb Chunker\n[Văn bản] > [Chương] > [Điều] > [Khoản]"]
-    E --> F["Vector Embedder\nBAAI/bge-m3 (1024 dims + BM25)"]
-    F --> G[("Qdrant Collection\nlegal_chunks\nPayload Indexes: doc_id, effective_date, district")]
+    E --> F["Vector Embedder\nGemini Embeddings (768 dims)"]
+    F --> G[("Qdrant Collection\nlegal_chunks_gemini_embedding_001_v1\nPayload Indexes: doc_id, effective_date, district")]
 ```
 
 ### Đặc điểm nổi bật của Chunking:
@@ -128,7 +128,7 @@ flowchart LR
 
 ## 4. Chiến lược Tìm kiếm Lai (Hybrid Retrieval Strategy)
 
-- **Dense Semantic Retrieval**: Sử dụng mô hình `BAAI/bge-m3` sinh vector 1024 chiều, tính khoảng cách Cosine Distance. Giúp nắm bắt ý đồ người dùng dù không dùng đúng thuật ngữ luật chính xác.
+- **Dense Semantic Retrieval**: Sử dụng `gemini-embedding-001` sinh vector 768 chiều, tính khoảng cách Cosine Distance. Ingestion dùng `RETRIEVAL_DOCUMENT`, truy vấn dùng `RETRIEVAL_QUERY`; xem [ADR-0005](../adr/0005-gemini-embedding.md) về quota, dữ liệu gửi tới dịch vụ ngoài và migration collection.
 - **Sparse / Lexical Matching**: Bắt chính xác số hiệu văn bản (`31/2024/QH15`, `61/2024/QĐ-UBND`) và mã điều khoản (`Điều 94`, `Khoản 2`).
 - **Qdrant Payload Filtering**: Áp dụng bộ lọc ràng buộc trước (pre-filtering):
   - `effective_date <= as_of_date`: Văn bản đã có hiệu lực tại thời điểm tra cứu.

@@ -93,7 +93,7 @@ export default function Home() {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch(`${apiBase}/api/v1/query`, {
+      const response = await fetch("/api/query", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

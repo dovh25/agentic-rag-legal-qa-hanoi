@@ -6,10 +6,11 @@ Thư mục này ghi nhận các quyết định kiến trúc và công nghệ qu
 
 | Mã ADR | Tiêu đề Quyết định | Trạng thái | Ngày quyết định |
 |---|---|---|---|
-| [**ADR-0001**](0001-embedding-model-bge-m3.md) | Lựa chọn Mô hình Embedding BAAI/bge-m3 (Dense 1024-dim + Sparse BM25) | `Accepted` | 2026-10-04 |
+| [**ADR-0001**](0001-embedding-model-bge-m3.md) | Lựa chọn Mô hình Embedding BAAI/bge-m3 (Dense 1024-dim + Sparse BM25) | `Superseded by ADR-0005` | 2026-10-04 |
 | [**ADR-0002**](0002-llm-engine-google-gemini.md) | Lựa chọn LLM Engine — Google Gemini API (Free Tier qua OpenAI Protocol) | `Accepted` | 2026-10-04 |
 | [**ADR-0003**](0003-data-crawler-official-gazettes.md) | Chiến lược Thu thập Dữ liệu — Tự động Cào & Tải từ Cổng VBPL Chính thức | `Accepted` | 2026-10-04 |
 | [**ADR-0004**](0004-qdrant-hybrid-retrieval.md) | Lựa chọn Qdrant Vector Store & Kiến trúc Hybrid Retrieval | `Accepted` | 2026-10-04 |
+| [**ADR-0005**](0005-gemini-embedding.md) | Chuyển Embedding sang Google Gemini và version hóa Qdrant collection | `Accepted` | 2026-10-04 |
 
 ---
 

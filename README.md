@@ -8,7 +8,7 @@
 [![Tests](https://img.shields.io/badge/Tests-Pytest%20Passing-brightgreen.svg)](tests/)
 
 > **Hệ thống hỏi đáp thông minh văn bản quy phạm pháp luật về đất đai, quy hoạch, thu hồi đất, bồi thường và tái định cư tại Thành phố Hà Nội**  
-> *Được xây dựng trên kiến trúc **Agentic RAG** (LangGraph + FastAPI + Qdrant Vector Store + BGE-M3 Dense Embedding + BM25 Lexical Hybrid Search)*
+> *Được xây dựng trên kiến trúc **Agentic RAG** (LangGraph + FastAPI + Qdrant Vector Store + Gemini Embeddings + lexical retrieval)*
 
 ---
 
@@ -67,8 +67,8 @@ Hệ thống ứng dụng kiến trúc **Agentic RAG** điều phối qua **Lang
 flowchart TD
     subgraph INGESTION["Offline Ingestion Pipeline"]
         DOCS["Văn bản Quy phạm Pháp luật\n(Luật 2024, NĐ 88, 102, QĐ 61, NQ 52)"] --> PARSE["Legal Parser & Chunker\n(Phân cấp: Chương > Điều > Khoản)"]
-        PARSE --> EMBED["BGE-M3 Dense + BM25 Sparse"]
-        EMBED --> QDRANT[("Qdrant Vector DB\nCollection: legal_chunks")]
+        PARSE --> EMBED["Gemini Embeddings (768-dim)"]
+        EMBED --> QDRANT[("Qdrant Vector DB\nCollection: legal_chunks_gemini_embedding_001_v1")]
     end
 
     subgraph AGENT["Online Agentic RAG (LangGraph)"]
@@ -76,7 +76,7 @@ flowchart TD
         
         ROUTER -- "Vague / Thiếu dữ kiện" --> CLARIFY["Clarifier Node"] --> RESP_CLARIFY(["status: clarification_needed"])
         ROUTER -- "Multi-aspect / Phức tạp" --> PLANNER["Planner Node\n(Sub-query Decomposition)"]
-        ROUTER -- "Cụ thể / Trực tiếp" --> RETRIEVER["Hybrid Retriever Node\n- Dense Semantic (BGE-M3)\n- Lexical BM25 Search\n- Payload Filter (Hà Nội & Active)"]
+        ROUTER -- "Cụ thể / Trực tiếp" --> RETRIEVER["Retriever Node\n- Dense Semantic (Gemini Embedding)\n- Lexical topic fallback\n- Payload Filter (Hà Nội & Active)"]
         
         PLANNER --> RETRIEVER
         QDRANT -.-> RETRIEVER
@@ -94,7 +94,7 @@ flowchart TD
 ### Các Node điều phối trong LangGraph:
 - **`router_node`**: Phân loại đường đi (`single_hop`, `multi_hop`, `clarification`), nhận diện 30 quận/huyện Hà Nội và thời điểm áp dụng `as_of_date`.
 - **`planner_node`**: Tách câu hỏi đa bước (so sánh quy định Trung ương vs Hà Nội) thành các sub-queries độc lập.
-- **`retrieval_node`**: Thực thi tìm kiếm lai (Dense 1024-dim BGE-M3 + BM25 Sparse), kết hợp RRF (Reciprocal Rank Fusion) và bộ lọc payload nghiêm ngặt.
+- **`retrieval_node`**: Tìm kiếm dense bằng Gemini Embeddings, kết hợp lexical topic fallback và bộ lọc payload nghiêm ngặt. Cấu hình model/chiều và quy trình chuyển collection được ghi tại [ADR-0005](docs/adr/0005-gemini-embedding.md).
 - **`grader_node`**: Chấm điểm độ liên quan của các đoạn tài liệu truy xuất, loại bỏ dữ liệu nhiễu.
 - **`synthesize_node`**: Sinh câu trả lời bám sát bằng chứng, tạo danh sách trích dẫn chuẩn pháp lý.
 - **`verify_node`**: Hậu kiểm trích dẫn, xác nhận tính xác thực của điều khoản và URL trước khi trả về.
@@ -283,7 +283,7 @@ npm install
 cp .env.example .env.local
 npm run dev
 ```
-Mở [http://localhost:3000](http://localhost:3000). API mặc định tại `http://localhost:8000`; có thể đổi bằng `NEXT_PUBLIC_API_BASE_URL` trong `web/.env.local`.
+Mở [http://localhost:3000](http://localhost:3000). Query đi qua Next.js server route `/api/query`; đặt `API_BASE_URL` trong `web/.env.local` để chỉ định backend và `API_KEY` (nếu dùng) chỉ ở server-side.
 
 **Nạp corpus P0/P1**
 ```bash
@@ -308,13 +308,15 @@ make docker-down
 **Backend trên Render**
 1. Kết nối repository với Render và dùng Blueprint từ `render.yaml` (hoặc tạo Python Web Service với cùng build/start commands).
 2. Chọn gói dịch vụ phù hợp; Blueprint không khóa gói trả phí hay miễn phí.
-3. Thiết lập các biến môi trường được yêu cầu trong Render: `OPENAI_API_KEY` (Gemini), `QDRANT_URL`, `QDRANT_API_KEY`, và `CORS_ORIGINS`.
+3. Thiết lập trong Render: `ENVIRONMENT=production`, `API_KEY`, `OPENAI_API_KEY` (Gemini LLM), `EMBEDDING_API_KEY` (Gemini embeddings), `EMBEDDING_MODEL=gemini-embedding-001`, `EMBEDDING_DIMENSION=768`, `QDRANT_URL`, `QDRANT_API_KEY`, `QDRANT_COLLECTION=legal_chunks_gemini_embedding_001_v1`, và `CORS_ORIGINS`.
 4. `QDRANT_URL`/`QDRANT_API_KEY` phải trỏ tới Qdrant Cloud hoặc một Qdrant service bên ngoài có dữ liệu bền vững; không dùng filesystem tạm của web service Render để lưu collection.
 
 **Frontend trên Vercel**
 1. Import cùng repository, đặt Root Directory là `web`.
-2. Thêm biến `NEXT_PUBLIC_API_BASE_URL` với URL gốc Render, không kèm `/api/v1` (ví dụ `https://<render-service>.onrender.com`), rồi deploy.
-3. Thêm origin chính xác của website Vercel vào `CORS_ORIGINS` của Render, sau đó redeploy/restart backend. Nhiều origin có thể phân tách bằng dấu phẩy.
+2. Thêm `API_BASE_URL` với URL gốc Render, không kèm `/api/v1`, và thêm `API_KEY` server-only giống secret Render; không dùng `NEXT_PUBLIC_API_KEY`.
+3. `NEXT_PUBLIC_API_BASE_URL` có thể trỏ tới Render để mở tài liệu API từ giao diện. Thêm origin chính xác Vercel vào `CORS_ORIGINS` Render nếu client khác truy cập API trực tiếp, rồi redeploy/restart.
+
+Trước khi chuyển Render sang collection 768 chiều, chạy và xác minh migration staging theo [deployment security runbook](docs/ops/deployment-security.md). Collection `legal_chunks` hiện hữu là legacy 1024 chiều; không trỏ code mới vào collection đó.
 
 Không commit `.env` hoặc gửi API keys qua chat. Nhập secrets trực tiếp trong dashboard Render. Trước khi mở dịch vụ cho người dùng, cần nạp và kiểm tra corpus P0 trên Qdrant Cloud; pipeline sẽ không thay thế văn bản pháp lý chưa tải/xác minh được bằng dữ liệu giả.
 

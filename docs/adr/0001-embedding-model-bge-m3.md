@@ -1,6 +1,6 @@
 # ADR-0001: Lựa chọn Mô hình Embedding BAAI/bge-m3 (Dense 1024-dim + Sparse BM25)
 
-- **Trạng thái**: Accepted
+- **Trạng thái**: Superseded by [ADR-0005](0005-gemini-embedding.md)
 - **Ngày quyết định**: 2026-10-04
 - **Người quyết định**: Vũ Huy Đô (Senior AI Engineer / Tech Lead)
 - **Tài liệu liên quan**: [docs/PRD.md](../PRD.md), [docs/Brief.md](../Brief.md), [.agents/skills/legal-corpus-ingest/SKILL.md](../../.agents/skills/legal-corpus-ingest/SKILL.md)

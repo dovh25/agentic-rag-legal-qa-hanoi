@@ -1,7 +1,7 @@
 # Project Instructions: Agentic RAG Legal QA Hanoi
 
 > **Hệ thống hỏi đáp pháp luật đất đai, quy hoạch, thu hồi đất, bồi thường và tái định cư tại Thành phố Hà Nội**  
-> Kiến trúc: **Agentic RAG (LangGraph + FastAPI + Qdrant + BGE-M3 + BM25)**  
+> Kiến trúc: **Agentic RAG (LangGraph + FastAPI + Qdrant + Gemini Embeddings + lexical retrieval)**
 > Bộ tài liệu định hướng chuẩn mực: [docs/PRD.md](docs/PRD.md) · [docs/Brief.md](docs/Brief.md) · [docs/Wireframe_UI_Flow.md](docs/Wireframe_UI_Flow.md)
 
 ---
@@ -48,10 +48,10 @@ Hệ thống Agentic RAG chuyên sâu phục vụ tra cứu, diễn giải và �
 
 - **Ngôn ngữ & Runtime**: Python 3.11+
 - **LLM Inference Engine**: Google Gemini API (`gemini-3.8-flash` qua OpenAI-compatible protocol - Free Tier)
-- **Embedding Model**: `BAAI/bge-m3` (1024-dim dense + BM25 sparse lexical weights - Local/Free)
+- **Embedding Model**: `gemini-embedding-001` (768-dim; Google API key/quota required; see `docs/adr/0005-gemini-embedding.md`)
 - **API Framework**: FastAPI, Pydantic v2, Uvicorn
 - **Agent Orchestration**: LangGraph 0.2+, LangChain Core
-- **Vector Store & Hybrid Retrieval**: Qdrant (collection: `legal_chunks`, HNSW cosine, payload indexes)
+- **Vector Store & Hybrid Retrieval**: Qdrant (current embedding collection: `legal_chunks_gemini_embedding_001_v1`; do not reuse the legacy `legal_chunks` dimension)
 - **Data Acquisition**: Automated Crawler từ Cổng VBPL Chính phủ & Công báo Hà Nội
 - **Architecture Decisions**: Tài liệu hóa chi tiết tại `docs/adr/` (ADR-0001 đến ADR-0004)
 - **Frontend Specification**: React / Next.js theo [docs/Wireframe_UI_Flow.md](docs/Wireframe_UI_Flow.md) (Palette: Deep Navy `#1B4F72`, Accent Orange `#E67E22`)
@@ -93,7 +93,7 @@ Bám sát đặc tả tại **PRD Section 10**:
 
 - **Tuần 1: Foundation & Agent Core** (M1):
   - Ingestion pipeline hoàn chỉnh: parse cấu trúc Chương > Điều > Khoản, gắn breadcrumb context.
-  - Đánh chỉ mục toàn bộ Corpus P0 vào Qdrant collection `legal_chunks`.
+  - Đánh chỉ mục toàn bộ Corpus P0 vào Qdrant collection được version hóa theo ADR-0005.
   - Hoàn thiện 4 node lõi LangGraph: `router_node`, `retrieval_node`, `grader_node`, `synthesize_node`.
 - **Tuần 2: MVP Complete** (M2 - Go/No-Go Checkpoint):
   - `planner_node` (xử lý truy vấn đa bước Multi-hop), `clarification_node`, bộ lọc `as_of_date`.

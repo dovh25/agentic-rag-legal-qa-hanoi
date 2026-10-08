@@ -92,8 +92,8 @@ flowchart LR
 |---|---|
 | **Agent Orchestration** | LangGraph 0.2+ |
 | **LLM** | Google Gemini (gemini-3.8-flash qua OpenAI-compatible endpoint) |
-| **Embedding** | BAAI/bge-m3 (1024 dims dense + BM25 sparse weights) |
-| **Vector Store** | Qdrant (Qdrant Cloud / Docker local / collection: legal_chunks) |
+| **Embedding** | Google Gemini `gemini-embedding-001` (768 dims; document/query task types; see ADR-0005) |
+| **Vector Store** | Qdrant (Qdrant Cloud / Docker local / versioned embedding collection; current default: `legal_chunks_gemini_embedding_001_v1`) |
 | **Data Ingestion** | Automated Crawler & Parser (vanban.chinhphu.vn, congbao.hanoi.gov.vn) |
 | **API** | FastAPI + Uvicorn |
 | **Data Validation** | Pydantic v2 |

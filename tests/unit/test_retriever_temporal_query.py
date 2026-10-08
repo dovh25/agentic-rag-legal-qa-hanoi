@@ -1,7 +1,10 @@
 from datetime import date
 from types import SimpleNamespace
 
+import pytest
+
 from src.agent.retriever import HybridRetriever
+from src.ingest.indexer import CollectionDimensionMismatchError
 
 
 def test_low_confidence_dense_search_falls_back_to_exact_topic_match(monkeypatch):
@@ -31,6 +34,15 @@ def test_low_confidence_dense_search_falls_back_to_exact_topic_match(monkeypatch
     )
 
     class FakeClient:
+        def get_collection(self, **kwargs):
+            return SimpleNamespace(
+                config=SimpleNamespace(
+                    params=SimpleNamespace(
+                        vectors=SimpleNamespace(size=retriever.settings.EMBEDDING_DIMENSION)
+                    )
+                )
+            )
+
         def query_points(self, **kwargs):
             return SimpleNamespace(
                 points=[
@@ -43,7 +55,13 @@ def test_low_confidence_dense_search_falls_back_to_exact_topic_match(monkeypatch
 
     retriever = HybridRetriever()
     monkeypatch.setattr(retriever, "get_client", lambda: FakeClient())
-    monkeypatch.setattr(retriever.indexer, "generate_embeddings", lambda texts: [[0.0] * 1024])
+    monkeypatch.setattr(
+        retriever.indexer,
+        "generate_embeddings",
+        lambda texts, task_type="RETRIEVAL_DOCUMENT": [
+            [0.0] * retriever.settings.EMBEDDING_DIMENSION
+        ],
+    )
     retriever._is_connected = True
 
     results = retriever.retrieve(
@@ -59,13 +77,28 @@ def test_qdrant_query_enforces_effective_and_expiry_dates(monkeypatch):
     captured = {}
 
     class FakeClient:
+        def get_collection(self, **kwargs):
+            return SimpleNamespace(
+                config=SimpleNamespace(
+                    params=SimpleNamespace(
+                        vectors=SimpleNamespace(size=retriever.settings.EMBEDDING_DIMENSION)
+                    )
+                )
+            )
+
         def query_points(self, **kwargs):
             captured.update(kwargs)
             return SimpleNamespace(points=[SimpleNamespace(payload={}, score=0.9)])
 
     retriever = HybridRetriever()
     monkeypatch.setattr(retriever, "get_client", lambda: FakeClient())
-    monkeypatch.setattr(retriever.indexer, "generate_embeddings", lambda texts: [[0.0] * 1024])
+    monkeypatch.setattr(
+        retriever.indexer,
+        "generate_embeddings",
+        lambda texts, task_type="RETRIEVAL_DOCUMENT": [
+            [0.0] * retriever.settings.EMBEDDING_DIMENSION
+        ],
+    )
     retriever._is_connected = True
 
     retriever.retrieve(
@@ -81,3 +114,108 @@ def test_qdrant_query_enforces_effective_and_expiry_dates(monkeypatch):
     assert query_filter.must[2].key == "administrative_area"
     assert query_filter.must_not[0].key == "expiry_date"
     assert query_filter.must_not[0].range.lt == date(2024, 10, 7)
+
+
+def test_embedding_failure_does_not_fall_back_to_local_retrieval(monkeypatch):
+    retriever = HybridRetriever()
+
+    class FakeClient:
+        def get_collection(self, **kwargs):
+            return SimpleNamespace(
+                config=SimpleNamespace(
+                    params=SimpleNamespace(
+                        vectors=SimpleNamespace(size=retriever.settings.EMBEDDING_DIMENSION)
+                    )
+                )
+            )
+
+    def fail_embedding(*args, **kwargs):
+        raise RuntimeError("Gemini unavailable")
+
+    monkeypatch.setattr(retriever, "get_client", lambda: FakeClient())
+    monkeypatch.setattr(retriever.indexer, "generate_embeddings", fail_embedding)
+    monkeypatch.setattr(
+        retriever,
+        "_offline_retrieve",
+        lambda *args, **kwargs: pytest.fail("must not hide embedding failure"),
+    )
+    retriever._is_connected = True
+
+    with pytest.raises(RuntimeError, match="Gemini unavailable"):
+        retriever.retrieve("quy định bồi thường đất")
+
+
+def test_retriever_rejects_legacy_collection_dimension(monkeypatch):
+    retriever = HybridRetriever()
+
+    class FakeClient:
+        def get_collection(self, **kwargs):
+            return SimpleNamespace(
+                config=SimpleNamespace(params=SimpleNamespace(vectors=SimpleNamespace(size=1024)))
+            )
+
+    monkeypatch.setattr(retriever, "get_client", lambda: FakeClient())
+    monkeypatch.setattr(retriever.indexer, "generate_embeddings", lambda *args, **kwargs: [])
+    retriever._is_connected = True
+
+    with pytest.raises(CollectionDimensionMismatchError, match="versioned collection"):
+        retriever.retrieve("quy định bồi thường đất")
+
+
+def test_retriever_extracts_multiple_explicit_documents():
+    from src.agent.retriever import extract_requested_doc_ids
+
+    assert extract_requested_doc_ids(
+        "Bồi thường theo Luật Đất đai 2024 và Nghị định 88/2024/NĐ-CP"
+    ) == ["88-2024-ND-CP", "31-2024-QH15"]
+    assert extract_requested_doc_ids("So sánh Luật Đất đai 2013 và Luật Đất đai 2024") == [
+        "31-2024-QH15",
+        "45-2013-QH13",
+    ]
+
+
+def test_production_retrieval_does_not_fall_back_when_qdrant_is_unavailable(monkeypatch):
+    retriever = HybridRetriever()
+    monkeypatch.setattr(retriever.settings, "ENVIRONMENT", "production")
+    monkeypatch.setattr(retriever, "get_client", lambda: None)
+    monkeypatch.setattr(
+        retriever,
+        "_offline_retrieve",
+        lambda *args, **kwargs: pytest.fail("production must not use local corpus"),
+    )
+
+    with pytest.raises(RuntimeError, match="refusing to fall back"):
+        retriever.retrieve("Hỏi về bồi thường đất")
+
+
+def test_production_retrieval_propagates_qdrant_search_errors(monkeypatch):
+    retriever = HybridRetriever()
+    monkeypatch.setattr(retriever.settings, "ENVIRONMENT", "production")
+    monkeypatch.setattr(
+        retriever,
+        "validate_collection_dimension",
+        lambda client: None,
+    )
+    monkeypatch.setattr(
+        retriever.indexer,
+        "generate_embeddings",
+        lambda *args, **kwargs: [[0.0] * retriever.settings.EMBEDDING_DIMENSION],
+    )
+
+    class FailingClient:
+        def get_collection(self, **kwargs):
+            return SimpleNamespace()
+
+        def query_points(self, **kwargs):
+            raise OSError("vector database unavailable")
+
+    monkeypatch.setattr(retriever, "get_client", lambda: FailingClient())
+    monkeypatch.setattr(
+        retriever,
+        "_offline_retrieve",
+        lambda *args, **kwargs: pytest.fail("production must not use local corpus"),
+    )
+    retriever._is_connected = True
+
+    with pytest.raises(RuntimeError, match="Production Qdrant retrieval is unavailable"):
+        retriever.retrieve("Hỏi về bồi thường đất")

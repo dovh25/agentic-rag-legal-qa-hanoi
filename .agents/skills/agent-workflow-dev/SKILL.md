@@ -28,7 +28,7 @@ This skill provides developer guidance for modifying, extending, and verifying t
      │             │
      ▼             ▼
   ┌───────────────────┐
-  │     retrieval     │ (Hybrid: dense BGE-M3 1024-dim + BM25, Payload filter)
+  │     retrieval     │ (Gemini dense 768-dim + lexical fallback, payload filter)
   └─────────┬─────────┘
             │
             ▼
@@ -82,7 +82,7 @@ class AgentState(TypedDict, total=False):
 All node implementations reside in `src/agent/nodes.py`:
 - `router_node(state)`: Analyzes query complexity, extracts district (30 Hanoi districts) and `as_of_date`, routes to `single_hop`, `multi_hop`, or `clarification`.
 - `planner_node(state)`: Decomposes complex comparative queries into atomic sub-queries (e.g., Central Law vs. Hanoi Decree).
-- `retrieval_node(state)`: Executes hybrid retrieval via Qdrant Client (Dense BGE-M3 + BM25 + Payload Filter: `legal_status == 'active'` and `administrative_area` contains `Hà Nội`).
+- `retrieval_node(state)`: Executes Qdrant dense retrieval using Gemini embeddings and lexical topic fallback, with payload filters for legal status and administrative area. See ADR-0005 for the collection/version contract.
 - `synthesize_node(state)`: Builds strict evidence-based answer with structured citations (`doc_id`, `document_title`, `document_number`, `article_ref`, `clause`, `snippet`, `source_url`, `effective_date`).
 - `verify_node(state)`: Checks citation provenance, verifies text quote matches, and abstains if evidence is unsupported.
 - `clarification_node(state)`: Formulates targeted questions when query lacks required legal parameters.

@@ -119,9 +119,9 @@ class LegalQAResponse(BaseModel):
 class FeedbackRequest(BaseModel):
     """User feedback payload conforming to PRD Section 10.3."""
 
-    query_id: str = Field(..., description="Query ID or UUID")
+    query_id: str = Field(..., min_length=1, max_length=128, description="Query ID or UUID")
     rating: Literal["positive", "negative"] = Field(..., description="'positive' or 'negative'")
-    comment: str | None = Field(None, description="Optional user comment")
+    comment: str | None = Field(None, max_length=1000, description="Optional user comment")
 
 
 class HealthResponse(BaseModel):
@@ -131,4 +131,5 @@ class HealthResponse(BaseModel):
     version: str = "1.0.0"
     qdrant: str = "connected"
     llm: str = "connected"
+    embedding: str = "configured"
     corpus_size: int = 1250

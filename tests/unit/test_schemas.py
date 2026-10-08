@@ -61,3 +61,10 @@ def test_feedback_rating_is_limited_to_supported_values():
     assert FeedbackRequest(query_id="query-1", rating="positive").rating == "positive"
     with pytest.raises(ValidationError):
         FeedbackRequest(query_id="query-1", rating="neutral")
+
+
+def test_feedback_fields_have_size_limits():
+    with pytest.raises(ValidationError):
+        FeedbackRequest(query_id="", rating="positive")
+    with pytest.raises(ValidationError):
+        FeedbackRequest(query_id="query-1", rating="negative", comment="x" * 1001)

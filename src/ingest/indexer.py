@@ -1,11 +1,25 @@
+import math
 import uuid
+from functools import lru_cache
+from typing import Literal
 
 from qdrant_client import QdrantClient
 from qdrant_client.http import models as qmodels
 
-from src.core.config import get_settings
+from src.core.config import get_embedding_api_key, get_settings
 from src.core.logging import logger
 from src.ingest.chunker import LegalChunk
+
+
+class CollectionDimensionMismatchError(RuntimeError):
+    """Raised when an existing Qdrant collection cannot store configured vectors."""
+
+
+@lru_cache(maxsize=4)
+def _get_embedding_client(api_key: str):
+    from google import genai
+
+    return genai.Client(api_key=api_key)
 
 
 class QdrantLegalIndexer:
@@ -18,15 +32,16 @@ class QdrantLegalIndexer:
         port: int | None = None,
         api_key: str | None = None,
         collection_name: str | None = None,
-        vector_dim: int = 1024,
+        vector_dim: int | None = None,
     ):
         settings = get_settings()
+        self.settings = settings
         self.url = url or settings.QDRANT_URL
         self.host = host or settings.QDRANT_HOST
         self.port = port or settings.QDRANT_PORT
         self.api_key = api_key or settings.QDRANT_API_KEY
         self.collection_name = collection_name or settings.QDRANT_COLLECTION
-        self.vector_dim = vector_dim
+        self.vector_dim = vector_dim or settings.EMBEDDING_DIMENSION
         self.client: QdrantClient | None = None
 
     def connect(self) -> QdrantClient:
@@ -71,6 +86,19 @@ class QdrantLegalIndexer:
                 logger.info(f"Collection '{self.collection_name}' created successfully.")
 
             collection_info = client.get_collection(collection_name=self.collection_name)
+            vectors_config = getattr(
+                getattr(getattr(collection_info, "config", None), "params", None),
+                "vectors",
+                None,
+            )
+            existing_vector_size = getattr(vectors_config, "size", None)
+            if existing_vector_size and existing_vector_size != self.vector_dim:
+                raise CollectionDimensionMismatchError(
+                    f"Qdrant collection '{self.collection_name}' uses {existing_vector_size}-dim "
+                    f"vectors, but {self.settings.EMBEDDING_MODEL} is configured for "
+                    f"{self.vector_dim}. Index into a new versioned collection and switch "
+                    "QDRANT_COLLECTION only after verification."
+                )
             current_schema = collection_info.payload_schema or {}
             index_schemas = {
                 "doc_id": qmodels.PayloadSchemaType.KEYWORD,
@@ -98,40 +126,66 @@ class QdrantLegalIndexer:
                 )
             return True
         except Exception as e:
+            if isinstance(e, CollectionDimensionMismatchError):
+                raise
             logger.warning(
                 f"Could not connect to Qdrant at {self.host}:{self.port} ({e}). Running in offline/mock mode."
             )
             return False
 
-    def generate_embeddings(self, texts: list[str]) -> list[list[float]]:
-        """Generate dense embeddings using BGE-M3 or fallback to normalized mock vectors."""
-        # Try importing sentence_transformers for local BGE-M3 (ADR-0001)
-        try:
-            from sentence_transformers import SentenceTransformer
+    def generate_embeddings(
+        self,
+        texts: list[str],
+        task_type: Literal["RETRIEVAL_QUERY", "RETRIEVAL_DOCUMENT"] = "RETRIEVAL_DOCUMENT",
+    ) -> list[list[float]]:
+        """Generate normalized Gemini embeddings; fail explicitly instead of indexing fake vectors."""
+        if not texts:
+            return []
 
-            model = SentenceTransformer("BAAI/bge-m3")
-            vectors = model.encode(texts, normalize_embeddings=True)
-            return [v.tolist() for v in vectors]
-        except Exception as e:
-            logger.debug(
-                f"sentence_transformers/BGE-M3 not loaded directly ({e}). Using deterministic embedding generator."
+        api_key = get_embedding_api_key(self.settings)
+        if not api_key:
+            raise RuntimeError(
+                "A valid Google Gemini API key is required for embeddings; configure "
+                "EMBEDDING_API_KEY or use OPENAI_API_KEY with the Gemini endpoint."
             )
-            import hashlib
-            import math
 
-            # Deterministic reproducible 1024-dim pseudo-embeddings for development & test suites
-            embeddings: list[list[float]] = []
-            for text in texts:
-                vec: list[float] = []
-                for i in range(self.vector_dim):
-                    h = hashlib.sha256(f"{text}-{i}".encode()).hexdigest()
-                    val = (int(h[:8], 16) / 0xFFFFFFFF) * 2 - 1.0
-                    vec.append(val)
-                # Normalize vector to unit length
-                norm = math.sqrt(sum(x * x for x in vec)) or 1.0
-                vec = [x / norm for x in vec]
-                embeddings.append(vec)
-            return embeddings
+        from google.genai import types
+
+        client = _get_embedding_client(api_key)
+        embeddings: list[list[float]] = []
+        batch_size = 100
+        for start in range(0, len(texts), batch_size):
+            batch = texts[start : start + batch_size]
+            response = client.models.embed_content(
+                model=self.settings.EMBEDDING_MODEL,
+                contents=batch,
+                config=types.EmbedContentConfig(
+                    task_type=task_type,
+                    output_dimensionality=self.vector_dim,
+                ),
+            )
+            batch_embeddings = response.embeddings or []
+            if len(batch_embeddings) != len(batch):
+                raise RuntimeError(
+                    "Gemini embedding response count does not match the input batch."
+                )
+
+            for embedding in batch_embeddings:
+                values = embedding.values
+                if values is None or len(values) != self.vector_dim:
+                    raise RuntimeError(
+                        f"Gemini returned an invalid embedding dimension; expected "
+                        f"{self.vector_dim} for {self.settings.EMBEDDING_MODEL}."
+                    )
+                vector = [float(value) for value in values]
+                if not all(math.isfinite(value) for value in vector):
+                    raise RuntimeError("Gemini returned non-finite embedding values.")
+                norm = math.sqrt(sum(value * value for value in vector))
+                if norm == 0:
+                    raise RuntimeError("Gemini returned a zero-length embedding.")
+                embeddings.append([value / norm for value in vector])
+
+        return embeddings
 
     def index_chunks(self, chunks: list[LegalChunk], batch_size: int = 64) -> int:
         """Batch index chunks into Qdrant collection."""
@@ -141,12 +195,21 @@ class QdrantLegalIndexer:
         client = self.connect()
         is_ready = self.ensure_collection()
         if not is_ready:
-            logger.warning(f"Qdrant server unavailable. Skipping index of {len(chunks)} chunks.")
-            return 0
+            raise RuntimeError(
+                f"Qdrant collection '{self.collection_name}' is unavailable; "
+                f"refusing to skip indexing {len(chunks)} legal chunks."
+            )
 
         total_indexed = 0
         texts = [chunk.text for chunk in chunks]
-        embeddings = self.generate_embeddings(texts)
+        embeddings = self.generate_embeddings(texts, task_type="RETRIEVAL_DOCUMENT")
+        if len(embeddings) != len(chunks) or any(
+            len(vector) != self.vector_dim for vector in embeddings
+        ):
+            raise RuntimeError(
+                "Embedding output does not match the number of legal chunks or configured "
+                "Qdrant vector dimension; refusing to index."
+            )
 
         points: list[qmodels.PointStruct] = []
         for i, chunk in enumerate(chunks):

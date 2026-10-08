@@ -3,7 +3,7 @@ name: legal-corpus-ingest
 description: >-
   Procedures and guidelines for parsing Vietnamese legal documents (Land Law, Hanoi decrees,
   land pricing tables), chunking hierarchically by Điều/Khoản, extracting metadata,
-  generating BGE-M3 embeddings, and indexing into Qdrant collection legal_chunks.
+  generating Gemini embeddings, and indexing into a versioned Qdrant collection.
 ---
 
 # Legal Corpus Ingestion Skill
@@ -88,11 +88,11 @@ Every indexed chunk in Qdrant must contain the following payload metadata:
 
 ## 4. Qdrant Collection & Indexing Configuration
 
-Collection name: `legal_chunks`
+Collection name: `legal_chunks_gemini_embedding_001_v1` (current default; see ADR-0005)
 
 | Parameter | Specification |
 |---|---|
-| **Dense Vector Dimension** | 1024 (`BAAI/bge-m3`) |
+| **Dense Vector Dimension** | 768 (`gemini-embedding-001`; see ADR-0005) |
 | **Distance Metric** | Cosine |
 | **Sparse Vector** | BM25 / Lexical weights |
 | **Payload Indexed Fields** | `legal_status` (keyword), `document_number` (keyword), `article_ref` (keyword), `administrative_area` (keyword), `effective_date` (datetime/integer) |
@@ -100,5 +100,5 @@ Collection name: `legal_chunks`
 ### Verification Command
 Verify Qdrant is active and healthy:
 ```bash
-curl -s http://localhost:6333/collections/legal_chunks | jq .
+curl -s http://localhost:6333/collections/legal_chunks_gemini_embedding_001_v1 | jq .
 ```

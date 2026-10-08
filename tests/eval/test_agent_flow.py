@@ -125,6 +125,29 @@ def test_grader_abstains_when_specific_query_topic_has_no_matching_evidence():
     assert result["retrieved_documents"] == []
 
 
+def test_grader_abstains_when_multi_hop_requires_missing_2013_law():
+    result = grader_node(
+        {
+            "query": (
+                "So sánh điều kiện bồi thường đất nông nghiệp theo Luật Đất đai 2013 "
+                "và Luật Đất đai 2024 tại Hà Nội"
+            ),
+            "reasoning_steps": [],
+            "retrieved_documents": [
+                {
+                    "doc_id": "31-2024-QH15",
+                    "article_ref": "Điều 89",
+                    "text": "Quy định về bồi thường đất nông nghiệp khi Nhà nước thu hồi đất.",
+                    "score": 0.9,
+                }
+            ],
+        }
+    )
+
+    assert result["status"] == "insufficient_evidence"
+    assert result["retrieved_documents"] == []
+
+
 def test_planner_respects_configured_maximum_and_keeps_district(monkeypatch):
     monkeypatch.setattr("src.agent.nodes.get_settings", lambda: SimpleNamespace(MAX_SUBQUERIES=3))
     result = planner_node(

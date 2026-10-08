@@ -15,8 +15,8 @@ Truy xuất văn bản pháp luật đòi hỏi một cơ chế lưu trữ và t
 
 ## 2. Quyết định (Decision)
 Dự án quyết định chọn **Qdrant** làm Vector Database chính:
-- **Collection**: `legal_chunks`
-- **Dense Vector**: 1024-dim (`BAAI/bge-m3`), Cosine distance.
+- **Collection**: originally `legal_chunks`; current embedding collections are versioned as described by [ADR-0005](0005-gemini-embedding.md).
+- **Dense Vector**: Cosine distance; model and dimension are configured together. The current embedding model and migration constraints are recorded in [ADR-0005](0005-gemini-embedding.md).
 - **Sparse Vector / Payload BM25**: Hỗ trợ tìm kiếm từ khóa chính xác điều khoản.
 - **Payload Index**: Đánh chỉ mục trường `doc_id`, `legal_status`, `document_number`, `article_ref`, `administrative_area`, `effective_date`.
 - **Triển khai**: Hỗ trợ linh hoạt cả Qdrant Cloud Cluster (quản lý qua `QDRANT_URL` và `QDRANT_API_KEY`) hoặc Container hóa qua Docker Compose (`qdrant/qdrant:latest`).

@@ -22,6 +22,7 @@ def retrieve_legal_documents(
     as_of_date: str | None = None,
     district: str | None = None,
     limit: int = 5,
+    target_doc_id: str | None = None,
 ) -> list[dict[str, Any]]:
     """Retrieve relevant legal chunks from Hanoi legal corpus (Qdrant / Hybrid).
 
@@ -43,6 +44,7 @@ def retrieve_legal_documents(
         as_of_date=as_of_date,
         district=district,
         top_k=limit,
+        target_doc_id=target_doc_id,
     )
     logger.info(f"Retriever returned {len(results)} chunks")
     return results

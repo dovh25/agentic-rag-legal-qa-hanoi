@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -7,6 +8,10 @@ class Settings(BaseSettings):
     # Application settings
     APP_NAME: str = "Agentic RAG Legal QA Hanoi"
     DEBUG: bool = True
+    ENVIRONMENT: str = "development"
+    API_KEY: str | None = None
+    RATE_LIMIT_REQUESTS: int = Field(default=30, ge=1, le=10000)
+    RATE_LIMIT_WINDOW_SECONDS: int = Field(default=60, ge=1, le=3600)
     API_V1_STR: str = "/api/v1"
     HOST: str = "0.0.0.0"
     PORT: int = 8000
@@ -17,13 +22,15 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str | None = None
     OPENAI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
     MODEL_NAME: str = "gemini-3.8-flash"
-    EMBEDDING_MODEL: str = "text-embedding-004"
+    EMBEDDING_MODEL: str = "gemini-embedding-001"
+    EMBEDDING_DIMENSION: int = 768
+    EMBEDDING_API_KEY: str | None = None
 
     # Vector Database (Qdrant)
     QDRANT_URL: str | None = None
     QDRANT_HOST: str = "localhost"
     QDRANT_PORT: int = 6333
-    QDRANT_COLLECTION: str = "legal_chunks"
+    QDRANT_COLLECTION: str = "legal_chunks_gemini_embedding_001_v1"
     QDRANT_API_KEY: str | None = None
 
     # Database
@@ -39,6 +46,19 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+
+def get_embedding_api_key(settings: Settings) -> str | None:
+    """Resolve the dedicated key, allowing the shared key only for Google's endpoint."""
+    if settings.EMBEDDING_API_KEY:
+        api_key = settings.EMBEDDING_API_KEY
+    elif "generativelanguage.googleapis.com" in settings.OPENAI_BASE_URL:
+        api_key = settings.OPENAI_API_KEY
+    else:
+        return None
+    if not api_key or not api_key.strip() or "your-" in api_key:
+        return None
+    return api_key
 
 
 @lru_cache

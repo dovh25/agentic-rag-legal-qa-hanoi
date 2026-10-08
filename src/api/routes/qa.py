@@ -7,8 +7,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import ValidationError
 
 from src.api.deps import get_agent_graph
-from src.core.config import get_settings
+from src.api.security import enforce_rate_limit, require_api_key
+from src.core.config import get_embedding_api_key, get_settings
 from src.core.logging import logger
+from src.ingest.indexer import CollectionDimensionMismatchError
 from src.models.schemas import (
     FeedbackRequest,
     HealthResponse,
@@ -26,12 +28,14 @@ router = APIRouter(tags=["Legal QA"])
     response_model=LegalQAResponse,
     summary="Query Hanoi Legal QA (PRD canonical endpoint)",
     description="Processes legal question on Hanoi land use, planning, compensation, and resettlement using Agentic RAG.",
+    dependencies=[Depends(require_api_key), Depends(enforce_rate_limit)],
 )
 @router.post(
     "/qa/ask",
     response_model=LegalQAResponse,
     summary="Ask a legal question (alias)",
     include_in_schema=False,
+    dependencies=[Depends(require_api_key), Depends(enforce_rate_limit)],
 )
 async def ask_legal_question(
     request: LegalQARequest,
@@ -96,7 +100,7 @@ async def ask_legal_question(
         logger.error(f"Error processing question: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Internal agent error: {str(e)}",
+            detail="The agent could not process the request. Please try again later.",
         ) from e
 
 
@@ -116,22 +120,45 @@ async def health_check() -> HealthResponse:
         retriever = get_retriever()
         client = await asyncio.to_thread(retriever.get_client)
         if client:
+            await asyncio.to_thread(retriever.validate_collection_dimension, client)
             count_res = await asyncio.to_thread(
                 client.count, collection_name=retriever.settings.QDRANT_COLLECTION
             )
             corpus_size = count_res.count
             qdrant_status = "connected"
+    except CollectionDimensionMismatchError as e:
+        logger.error(f"Health check found incompatible Qdrant collection: {e}")
+        qdrant_status = "dimension_mismatch"
     except Exception as e:
         logger.warning(f"Health check Qdrant status check failed: {e}")
 
-    llm_status = "configured" if settings.OPENAI_API_KEY else "not_configured"
-    system_status = "healthy" if qdrant_status == "connected" else "degraded"
+    llm_status = (
+        "configured"
+        if settings.OPENAI_API_KEY
+        and settings.OPENAI_API_KEY.strip()
+        and "your-" not in settings.OPENAI_API_KEY
+        else "not_configured"
+    )
+    embedding_status = "configured" if get_embedding_api_key(settings) else "not_configured"
+    system_status = (
+        "healthy"
+        if qdrant_status == "connected"
+        and corpus_size > 0
+        and llm_status == "configured"
+        and embedding_status == "configured"
+        and (
+            settings.ENVIRONMENT.casefold() != "production"
+            or bool(settings.API_KEY and settings.API_KEY.strip())
+        )
+        else "degraded"
+    )
 
     return HealthResponse(
         status=system_status,
         version="1.0.0",
         qdrant=qdrant_status,
         llm=llm_status,
+        embedding=embedding_status,
         corpus_size=corpus_size,
     )
 
@@ -140,6 +167,7 @@ async def health_check() -> HealthResponse:
     "/feedback",
     summary="User feedback conforming to PRD Section 10.3",
     status_code=status.HTTP_200_OK,
+    dependencies=[Depends(require_api_key), Depends(enforce_rate_limit)],
 )
 async def submit_feedback(feedback: FeedbackRequest) -> dict[str, Any]:
     """Record user satisfaction rating and feedback."""

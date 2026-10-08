@@ -330,8 +330,8 @@ graph TB
     end
 
     subgraph INFRA["INFRASTRUCTURE"]
-        QDRANT[("Qdrant (Cloud/Local)\nlegal_chunks")]
-        LLM["Google Gemini API\n(gemini-3.8-flash)\nBAAI/bge-m3 (1024 dims)"]
+        QDRANT[("Qdrant\nlegal_chunks_gemini_embedding_001_v1")]
+        LLM["Google Gemini API\n(gemini-3.8-flash + gemini-embedding-001)"]
     end
 
     UI & API_C -->|HTTPS/JSON| FA
@@ -370,8 +370,8 @@ flowchart LR
     A["Cổng VBPL / Công báo\n(HTML/Text)"] --> B["Parser\n(Chương/Điều/Khoản)"]
     B --> C["Text Cleaner\n(chuẩn hóa encoding\nloại bỏ nhiễu)"]
     C --> D["Breadcrumb Chunker\n([Văn bản] > [Chương]\n> [Điều] > [Khoản])"]
-    D --> E["Embedder\nBAAI/bge-m3\n1024 dims + BM25"]
-    E --> F[("Qdrant Upsert\nlegal_chunks\nvector + payload index")]
+    D --> E["Embedder\nGemini Embeddings\n768 dimensions"]
+    E --> F[("Qdrant Upsert\nversioned collection\nvector + payload index")]
 ```
 
 ### 8.4 Mô tả từng Node
@@ -551,7 +551,7 @@ Một feature được coi là Done khi:
 | LLM hallucinate trích dẫn pháp lý | Cao | Nghiêm trọng | Grader node + strict system prompt + `insufficient_evidence` |
 | Văn bản pháp luật thay đổi, corpus lỗi thời | Cao | Cao | Cập nhật corpus định kỳ, metadata `expiry_date` |
 | Latency cao khi multi-hop | Trung bình | Trung bình | Cache, streaming response, giới hạn sub_queries=3 |
-| Chi phí LLM & Embedding | Thấp | Cao | Sử dụng Google Gemini (gemini-3.8-flash Free Tier) kết hợp BGE-M3 local (0 VNĐ) |
+| Chi phí LLM & Embedding | Thấp | Cao | Dùng Google Gemini API cho LLM và embeddings; quota/chi phí phụ thuộc chính sách hiện hành của Google |
 | Người dùng tin tuyệt đối vào AI | Cao | Nghiêm trọng | Disclaimer rõ ràng, badge "Hỗ trợ tra cứu – Không phải tư vấn pháp lý" |
 | Corpus chứa văn bản scan OCR kém | Trung bình | Cao | OCR quality check, manual review trước ingest |
 | Qdrant downtime | Thấp | Cao | Containerized + health check + fallback message |
@@ -611,7 +611,7 @@ gantt
 **Tuần 1 — Foundation & Agent Core** (Đã hoàn thành - 100%)
 - [x] Khởi tạo project structure (DONE)
 - [x] Core config & logging setup (Loguru JSON structured logging)
-- [x] Qdrant Cloud setup + schema definition (`legal_chunks` 1024-dim Cosine, payload indexes)
+- [x] Qdrant Cloud setup + schema definition (legacy collection 1024-dim; current embedding contract 768-dim and requires a versioned collection migration per ADR-0005)
 - [x] Document ingestion pipeline (Automated crawler, hierarchical parser, breadcrumb chunker)
 - [x] Ingest corpus P0 (81 chunks: Luật 31/2024, NĐ 88/2024, NĐ 102/2024, QĐ 61/2024 Hà Nội, NQ 52/2025 Hà Nội)
 - [x] Core Agent nodes (Router, Hybrid Retriever, Grader, Synthesize LLM + fallback, Verify, Clarify)
@@ -657,13 +657,13 @@ gantt
 | Service | Vai trò | Fallback |
 |---|---|---|
 | Google Gemini API | LLM inference (gemini-3.8-flash qua OpenAI protocol) | Groq / Ollama |
-| BAAI/bge-m3 | Dense 1024-dim + Sparse BM25 Embedding (Local) | text-embedding-004 |
-| Qdrant Vector DB | Vector store (Qdrant Cloud / Docker: `legal_chunks`) | Local matcher |
+| Google Gemini API | `gemini-embedding-001`, 768-dim; `RETRIEVAL_DOCUMENT` / `RETRIEVAL_QUERY` | No synthetic-vector fallback; explicit error if unavailable |
+| Qdrant Vector DB | Vector store (Qdrant Cloud / Docker; versioned collection `legal_chunks_gemini_embedding_001_v1`) | Local matcher |
 | Cổng VBPL / Công báo Hà Nội | Nguồn văn bản gốc cào tự động | Lưu offline snapshot |
 
 ### 14.3 Constraints
 
-- Ngân sách LLM & Embedding: 0 VNĐ (sử dụng 100% Free Tier qua Google Gemini & BAAI/bge-m3 local)
+- Ngân sách LLM & Embedding: phụ thuộc quota/chính sách Google; không cam kết 0 VNĐ. Embedding gửi query và corpus công khai tới Google; cấu hình `EMBEDDING_API_KEY` riêng hoặc dùng `OPENAI_API_KEY` khi base URL là Google Gemini.
 - Corpus: chỉ sử dụng văn bản từ nguồn chính thức (Cổng Chính phủ, Công báo Hà Nội)
 - **Thời hạn: 3 tuần** từ ngày khởi động đến Demo Day
 - Đội ngũ: 1 developer (sinh viên)

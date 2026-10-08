@@ -3,6 +3,8 @@
 > Tài liệu đặc tả kỹ thuật và hợp đồng API (API Contracts) cho hệ thống Hỏi đáp Pháp luật Đất đai & Quy hoạch TP. Hà Nội.  
 > Framework: **FastAPI** | Data Validation: **Pydantic v2** | Runtime: **Uvicorn**
 
+Khi `API_KEY` được cấu hình, gửi `X-API-Key` cho các endpoint query và feedback. Môi trường `ENVIRONMENT=production` từ chối phục vụ các endpoint này nếu chưa cấu hình key. Query/feedback bị giới hạn mặc định 30 request mỗi 60 giây trên mỗi IP. Health response báo riêng tình trạng embedding, và chỉ trả `healthy` khi corpus khác rỗng, Qdrant dimension tương thích, LLM và embedding đã cấu hình, cùng API key ở production. Xem [deployment security runbook](../ops/deployment-security.md).
+
 ---
 
 ## 1. Tổng quan Endpoints
@@ -43,46 +45,25 @@ Gửi câu hỏi bằng ngôn ngữ tự nhiên để Agentic RAG xử lý (đ�
 - `max_results` (*integer, tùy chọn, mặc định 5, giới hạn 1–20*): Số lượng đoạn trích tối đa cần lấy.
 - `session_id` (*string, tùy chọn*): ID phiên hội thoại.
 - `include_reasoning_steps` (*boolean, tùy chọn, mặc định true*): Có trả về các bước suy luận của Agent hay không.
+- Header `X-API-Key` (*khi cấu hình*): API key lấy từ secret manager; không gửi key từ mã frontend. Giao diện web chuyển tiếp yêu cầu qua Next.js server route.
 
-#### Response: Trạng thái `answered` (200 OK)
+Lỗi xác thực trả `401`, cấu hình production thiếu API key trả `503`, và vượt rate limit trả `429` cùng `Retry-After`.
+
+#### Response: Trạng thái `insufficient_evidence` (200 OK)
 ```json
 {
   "query": "Khi bị thu hồi đất tại Đông Anh, tôi được bồi thường theo bảng giá nào?",
-  "status": "answered",
-  "answer": "Theo Điều 94 Luật Đất đai số 31/2024/QH15 và Quyết định số 61/2024/QĐ-UBND của UBND TP. Hà Nội, giá đất bồi thường khi Nhà nước thu hồi đất là giá đất cụ thể do UBND cấp có thẩm quyền phê duyệt tại thời điểm quyết định thu hồi đất...",
-  "citations": [
-    {
-      "document_title": "Luật Đất đai số 31/2024/QH15",
-      "document_number": "31/2024/QH15",
-      "article_ref": "Điều 94",
-      "effective_date": "2024-08-01",
-      "expiry_date": null,
-      "source_url": "https://vanban.chinhphu.vn/?classid=1&docid=211189",
-      "relevance_score": 0.95,
-      "excerpt": "Bồi thường về đất khi Nhà nước thu hồi đất ở..."
-    },
-    {
-      "document_title": "Quyết định số 61/2024/QĐ-UBND của UBND TP. Hà Nội",
-      "document_number": "61/2024/QĐ-UBND",
-      "article_ref": "Điều 7",
-      "effective_date": "2024-10-07",
-      "expiry_date": null,
-      "source_url": "https://congbao.hanoi.gov.vn/",
-      "relevance_score": 0.92,
-      "excerpt": "Quy định cụ thể một số nội dung về bồi thường, hỗ trợ, tái định cư khi Nhà nước thu hồi đất trên địa bàn thành phố Hà Nội..."
-    }
-  ],
+  "status": "insufficient_evidence",
+  "answer": "Chưa tìm thấy đủ căn cứ trong corpus để xác định chính xác bảng giá áp dụng cho trường hợp này. Vui lòng đối chiếu văn bản chính thức hoặc tham vấn cơ quan có thẩm quyền.",
+  "citations": [],
   "reasoning_steps": [
-    "Router: Phân loại câu hỏi dạng Single-hop",
-    "Retriever: Tìm kiếm trên Qdrant collection legal_chunks với hybrid BGE-M3 + BM25",
-    "Grader: Đánh giá độ liên quan pháp lý, giữ lại 4/5 chunks phù hợp",
-    "Synthesizer: Tổng hợp căn cứ pháp lý từ văn bản quy phạm pháp luật",
-    "Verifier: Kiểm tra 100% trích dẫn nguồn Cổng VBPL & Công báo Hà Nội"
+    "Router: single_hop",
+    "Retrieval/verification: không đủ bằng chứng có thể kiểm chứng"
   ],
   "route": "single_hop",
   "sub_queries": [],
   "clarification_question": null,
-  "processing_time_ms": 2850.5,
+  "processing_time_ms": 850.5,
   "as_of_date_applied": "2026-02-01",
   "metadata": {
     "as_of_date": "2026-02-01",

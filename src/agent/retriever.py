@@ -6,9 +6,11 @@ from qdrant_client.http import models as qmodels
 
 from src.core.config import get_settings
 from src.core.logging import logger
-from src.ingest.indexer import QdrantLegalIndexer
+from src.ingest.indexer import CollectionDimensionMismatchError, QdrantLegalIndexer
 
 DOCUMENT_NUMBER_TO_ID = {
+    "45/2013": "45-2013-QH13",
+    "45-2013": "45-2013-QH13",
     "31/2024": "31-2024-QH15",
     "31-2024": "31-2024-QH15",
     "88/2024": "88-2024-ND-CP",
@@ -50,6 +52,23 @@ def matching_legal_focus_phrases(query: str, evidence: str) -> list[str]:
         for phrase in LEGAL_FOCUS_PHRASES
         if phrase in query_lower and phrase in evidence_lower
     ]
+
+
+def extract_requested_doc_ids(query: str) -> list[str]:
+    """Extract explicit legal documents and the named 2024 Land Law from a query."""
+    query_lower = query.lower()
+    requested = list(
+        dict.fromkeys(
+            doc_id for pattern, doc_id in DOCUMENT_NUMBER_TO_ID.items() if pattern in query_lower
+        )
+    )
+    land_law_id = "31-2024-QH15"
+    if "luật đất đai 2024" in query_lower and land_law_id not in requested:
+        requested.append(land_law_id)
+    land_law_2013_id = "45-2013-QH13"
+    if "luật đất đai 2013" in query_lower and land_law_2013_id not in requested:
+        requested.append(land_law_2013_id)
+    return requested
 
 
 def is_document_valid_on(metadata: dict[str, Any], as_of_date: date) -> bool:
@@ -109,22 +128,48 @@ class HybridRetriever:
                 self._is_connected = False
         return self.client
 
+    def validate_collection_dimension(self, client: QdrantClient) -> None:
+        """Fail closed when the configured collection is incompatible with query vectors."""
+        collection_info = client.get_collection(collection_name=self.settings.QDRANT_COLLECTION)
+        vectors_config = getattr(
+            getattr(getattr(collection_info, "config", None), "params", None),
+            "vectors",
+            None,
+        )
+        existing_vector_size = getattr(vectors_config, "size", None)
+        if existing_vector_size != self.settings.EMBEDDING_DIMENSION:
+            raise CollectionDimensionMismatchError(
+                f"Qdrant collection '{self.settings.QDRANT_COLLECTION}' uses "
+                f"{existing_vector_size}-dim vectors, but the configured embedding "
+                f"uses {self.settings.EMBEDDING_DIMENSION}. Complete the versioned "
+                "collection migration before serving queries."
+            )
+
     def retrieve(
         self,
         query: str,
         as_of_date: str | None = None,
         district: str | None = None,
         top_k: int = 5,
+        target_doc_id: str | None = None,
     ) -> list[dict[str, Any]]:
         """Execute hybrid search with payload filtering."""
         effective_date = date.fromisoformat(as_of_date) if as_of_date else date.today()
         client = self.get_client()
 
         if client and self._is_connected:
+            self.validate_collection_dimension(client)
+            query_embeddings = self.indexer.generate_embeddings(
+                [query], task_type="RETRIEVAL_QUERY"
+            )
+            if len(query_embeddings) != 1:
+                raise RuntimeError("Query embedding service returned an invalid result count.")
+            query_vector = query_embeddings[0]
+            if len(query_vector) != self.settings.EMBEDDING_DIMENSION:
+                raise RuntimeError(
+                    "Query embedding dimension does not match the configured collection."
+                )
             try:
-                # 1. Generate query embedding
-                query_vector = self.indexer.generate_embeddings([query])[0]
-
                 # 2. Build payload filter
                 filter_conditions: list[qmodels.Condition] = [
                     qmodels.FieldCondition(
@@ -145,15 +190,23 @@ class HybridRetriever:
                     )
 
                 # Prioritize explicit document number if specified in query
-                for pattern, target_doc_id in DOCUMENT_NUMBER_TO_ID.items():
-                    if pattern in query.lower():
-                        filter_conditions.append(
-                            qmodels.FieldCondition(
-                                key="doc_id",
-                                match=qmodels.MatchValue(value=target_doc_id),
-                            )
+                requested_doc_ids = (
+                    [target_doc_id] if target_doc_id else extract_requested_doc_ids(query)
+                )
+                if len(requested_doc_ids) == 1:
+                    filter_conditions.append(
+                        qmodels.FieldCondition(
+                            key="doc_id",
+                            match=qmodels.MatchValue(value=requested_doc_ids[0]),
                         )
-                        break
+                    )
+                elif requested_doc_ids:
+                    filter_conditions.append(
+                        qmodels.FieldCondition(
+                            key="doc_id",
+                            match=qmodels.MatchAny(any=requested_doc_ids),
+                        )
+                    )
 
                 search_filter = qmodels.Filter(
                     must=filter_conditions,
@@ -220,15 +273,32 @@ class HybridRetriever:
                     )
                     if lexical_results:
                         return lexical_results
-                    logger.warning(
-                        "Lexical fallback found no sufficiently topic-matched evidence."
-                    )
+                    logger.warning("Lexical fallback found no sufficiently topic-matched evidence.")
                     return []
             except Exception as e:
+                if self.settings.ENVIRONMENT.casefold() == "production":
+                    logger.error(f"Production Qdrant retrieval failed: {e}")
+                    raise RuntimeError(
+                        "Production Qdrant retrieval is unavailable; refusing to fall back "
+                        "to the local corpus."
+                    ) from e
                 logger.warning(f"Qdrant search error ({e}). Falling back to local matcher.")
 
+        if self.settings.ENVIRONMENT.casefold() == "production" and (
+            client is None or not self._is_connected
+        ):
+            raise RuntimeError(
+                "Production Qdrant is unavailable; refusing to fall back to the local corpus."
+            )
+
         # Fallback offline retrieval based on lexical & legal entity matching
-        return self._offline_retrieve(query, effective_date.isoformat(), district, top_k)
+        return self._offline_retrieve(
+            query,
+            effective_date.isoformat(),
+            district,
+            top_k,
+            target_doc_id=target_doc_id,
+        )
 
     def _scroll_lexical_retrieve(
         self,
@@ -239,9 +309,7 @@ class HybridRetriever:
     ) -> list[dict[str, Any]]:
         """Use exact query concepts over a bounded full-corpus scan when vectors are weak."""
         query_lower = query.lower()
-        focus_phrases = [
-            phrase for phrase in LEGAL_FOCUS_PHRASES if phrase in query_lower
-        ]
+        focus_phrases = [phrase for phrase in LEGAL_FOCUS_PHRASES if phrase in query_lower]
         stop_words = {
             "và",
             "của",
@@ -336,6 +404,7 @@ class HybridRetriever:
         as_of_date: str | None,
         district: str | None,
         top_k: int = 5,
+        target_doc_id: str | None = None,
     ) -> list[dict[str, Any]]:
         """Fallback local retrieval matching against verified seed legal corpus."""
         import json
@@ -349,17 +418,10 @@ class HybridRetriever:
 
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         target_date = date.fromisoformat(as_of_date) if as_of_date else date.today()
-        query_lower = query.lower()
-        requested_doc_id = next(
-            (
-                doc_id
-                for pattern, doc_id in DOCUMENT_NUMBER_TO_ID.items()
-                if pattern in query_lower
-            ),
-            None,
-        )
-        if requested_doc_id and not any(
-            item.get("doc_id") == requested_doc_id for item in manifest
+        requested_doc_ids = [target_doc_id] if target_doc_id else extract_requested_doc_ids(query)
+        manifest_doc_ids = {item.get("doc_id") for item in manifest}
+        if requested_doc_ids and not all(
+            doc_id in manifest_doc_ids for doc_id in requested_doc_ids
         ):
             return []
         STOP_WORDS = {
@@ -454,7 +516,7 @@ class HybridRetriever:
         chunker = LegalChunker()
 
         for item in manifest:
-            if requested_doc_id and item.get("doc_id") != requested_doc_id:
+            if requested_doc_ids and item.get("doc_id") not in requested_doc_ids:
                 continue
             if item.get("legal_status", "active") != "active":
                 continue
