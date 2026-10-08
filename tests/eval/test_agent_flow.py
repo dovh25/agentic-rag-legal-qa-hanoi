@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
 from src.agent.graph import create_agent_graph
-from src.agent.nodes import planner_node
+from src.agent.nodes import grader_node, planner_node
 from src.agent.tools import check_document_validity
 
 
@@ -75,6 +75,54 @@ def test_agent_rejects_unrelated_query_with_generic_document_word():
 
     assert result["status"] == "insufficient_evidence"
     assert result.get("citations", []) == []
+
+
+def test_grader_prioritizes_exact_legal_topic_over_high_scoring_noise():
+    result = grader_node(
+        {
+            "query": "Hạn mức giao đất ở cho cá nhân tại quận Cầu Giấy theo Quyết định 61/2024",
+            "reasoning_steps": [],
+            "retrieved_documents": [
+                {
+                    "doc_id": "61-2024-QD-UBND",
+                    "article_ref": "Điều 18",
+                    "text": "Bồi thường, hỗ trợ về đất nông nghiệp tại thành phố Hà Nội.",
+                    "score": 0.9,
+                },
+                {
+                    "doc_id": "61-2024-QD-UBND",
+                    "article_ref": "Điều 14",
+                    "text": (
+                        "Điều 14: Hạn mức giao đất ở cho cá nhân tại thành phố Hà Nội. "
+                        "Tại các phường thuộc các quận: không quá 90 m2/cá nhân."
+                    ),
+                    "score": 0.06,
+                },
+            ],
+        }
+    )
+
+    assert [doc["article_ref"] for doc in result["retrieved_documents"]] == ["Điều 14"]
+
+
+def test_grader_abstains_when_specific_query_topic_has_no_matching_evidence():
+    result = grader_node(
+        {
+            "query": "Hạn mức giao đất ở cho cá nhân tại quận Cầu Giấy?",
+            "reasoning_steps": [],
+            "retrieved_documents": [
+                {
+                    "doc_id": "61-2024-QD-UBND",
+                    "article_ref": "Điều 18",
+                    "text": "Bồi thường, hỗ trợ về đất nông nghiệp tại thành phố Hà Nội.",
+                    "score": 0.9,
+                }
+            ],
+        }
+    )
+
+    assert result["status"] == "insufficient_evidence"
+    assert result["retrieved_documents"] == []
 
 
 def test_planner_respects_configured_maximum_and_keeps_district(monkeypatch):

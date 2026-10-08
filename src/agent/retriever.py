@@ -27,6 +27,30 @@ DOCUMENT_NUMBER_TO_ID = {
     "10-2024": "10-2024-TT-BTNMT",
 }
 
+LEGAL_FOCUS_PHRASES = (
+    "hạn mức giao đất ở",
+    "hạn mức công nhận đất ở",
+    "điều kiện thu hồi đất",
+    "thu hồi đất",
+    "bồi thường đất nông nghiệp",
+    "bồi thường",
+    "tái định cư",
+    "bảng giá đất",
+    "giá đất",
+    "đăng ký đất đai",
+)
+
+
+def matching_legal_focus_phrases(query: str, evidence: str) -> list[str]:
+    """Return specific legal concepts present in both a query and evidence."""
+    query_lower = query.lower()
+    evidence_lower = evidence.lower()
+    return [
+        phrase
+        for phrase in LEGAL_FOCUS_PHRASES
+        if phrase in query_lower and phrase in evidence_lower
+    ]
+
 
 def is_document_valid_on(metadata: dict[str, Any], as_of_date: date) -> bool:
     """Return whether a document is in force on the inclusive target date."""
@@ -179,13 +203,132 @@ class HybridRetriever:
                             "score": float(point.score),
                         }
                     )
-                if results:
+                if results and max(result["score"] for result in results) >= (
+                    self.settings.SIMILARITY_THRESHOLD
+                ):
                     return results
+                if results:
+                    logger.warning(
+                        "Dense retrieval confidence below threshold; trying exact legal-topic "
+                        "matching against indexed payloads."
+                    )
+                    lexical_results = self._scroll_lexical_retrieve(
+                        client,
+                        search_filter,
+                        query,
+                        top_k,
+                    )
+                    if lexical_results:
+                        return lexical_results
+                    logger.warning(
+                        "Lexical fallback found no sufficiently topic-matched evidence."
+                    )
+                    return []
             except Exception as e:
                 logger.warning(f"Qdrant search error ({e}). Falling back to local matcher.")
 
         # Fallback offline retrieval based on lexical & legal entity matching
         return self._offline_retrieve(query, effective_date.isoformat(), district, top_k)
+
+    def _scroll_lexical_retrieve(
+        self,
+        client: QdrantClient,
+        search_filter: qmodels.Filter,
+        query: str,
+        top_k: int,
+    ) -> list[dict[str, Any]]:
+        """Use exact query concepts over a bounded full-corpus scan when vectors are weak."""
+        query_lower = query.lower()
+        focus_phrases = [
+            phrase for phrase in LEGAL_FOCUS_PHRASES if phrase in query_lower
+        ]
+        stop_words = {
+            "và",
+            "của",
+            "các",
+            "cho",
+            "về",
+            "thì",
+            "là",
+            "ở",
+            "tại",
+            "theo",
+            "được",
+            "có",
+            "những",
+            "này",
+            "đó",
+            "quy",
+            "định",
+            "mới",
+            "nhất",
+        }
+        query_terms = {
+            term for term in query_lower.split() if len(term) > 1 and term not in stop_words
+        }
+        points: list[Any] = []
+        offset: Any = None
+        page_size = 256
+        max_pages = 16
+
+        for _ in range(max_pages):
+            page, offset = client.scroll(
+                collection_name=self.settings.QDRANT_COLLECTION,
+                scroll_filter=search_filter,
+                limit=page_size,
+                offset=offset,
+                with_payload=True,
+                with_vectors=False,
+            )
+            points.extend(page)
+            if offset is None:
+                break
+        else:
+            logger.warning(
+                "Skipping lexical fallback because corpus exceeds its safe scan limit "
+                f"({page_size * max_pages} points)."
+            )
+            return []
+
+        ranked: list[tuple[int, int, dict[str, Any]]] = []
+        for point in points:
+            payload = point.payload or {}
+            text = str(payload.get("text", ""))
+            title = str(payload.get("document_title", ""))
+            article = str(payload.get("article_ref", ""))
+            evidence = f"{text} {title} {article}"
+            matched_phrases = matching_legal_focus_phrases(query, evidence)
+            if focus_phrases and not matched_phrases:
+                continue
+
+            evidence_terms = set(evidence.lower().split())
+            term_overlap = len(query_terms & evidence_terms)
+            if not focus_phrases and term_overlap < 2:
+                continue
+
+            ranked.append(
+                (
+                    len(matched_phrases),
+                    term_overlap,
+                    {
+                        "doc_id": payload.get("doc_id", ""),
+                        "document_title": title,
+                        "title": title,
+                        "document_number": payload.get("document_number", ""),
+                        "article_ref": article,
+                        "article": article,
+                        "clause": payload.get("clause"),
+                        "text": text,
+                        "source_url": payload.get("source_url"),
+                        "effective_date": payload.get("effective_date"),
+                        "expiry_date": payload.get("expiry_date"),
+                        "score": 0.0,
+                    },
+                )
+            )
+
+        ranked.sort(key=lambda item: (item[0], item[1]), reverse=True)
+        return [item[2] for item in ranked[:top_k]]
 
     def _offline_retrieve(
         self,

@@ -3,6 +3,7 @@ from typing import Any
 
 from openai import OpenAI
 
+from src.agent.retriever import LEGAL_FOCUS_PHRASES, matching_legal_focus_phrases
 from src.agent.state import AgentState
 from src.agent.tools import retrieve_legal_documents
 from src.core.config import get_settings
@@ -44,7 +45,6 @@ HANOI_DISTRICTS: list[str] = [
     "Thường Tín",
     "Ứng Hòa",
 ]
-
 
 def _extract_hanoi_district(query: str, current_district: str | None = None) -> str | None:
     """Extract Hanoi district from query if not already explicitly specified."""
@@ -213,6 +213,7 @@ def grader_node(state: AgentState) -> dict[str, Any]:
     steps = list(state.get("reasoning_steps", []))
     docs = state.get("retrieved_documents", [])
     query_lower = state.get("query", "").lower()
+    focus_phrases = [phrase for phrase in LEGAL_FOCUS_PHRASES if phrase in query_lower]
     LEGAL_STOP_WORDS = {
         "và",
         "của",
@@ -307,6 +308,11 @@ def grader_node(state: AgentState) -> dict[str, Any]:
         text_lower = doc.get("text", "").lower()
         title_lower = (doc.get("document_title") or doc.get("title") or "").lower()
         article_lower = (doc.get("article_ref") or doc.get("article") or "").lower()
+        evidence_text = f"{text_lower} {title_lower} {article_lower}"
+
+        matched_focus_phrases = matching_legal_focus_phrases(query_lower, evidence_text)
+        if focus_phrases and not matched_focus_phrases:
+            continue
 
         # Check keyword presence in chunk text/title/article
         matched_terms = [
@@ -317,7 +323,13 @@ def grader_node(state: AgentState) -> dict[str, Any]:
 
         # Must have at least 2 matching terms or score >= 0.25 with matching terms
         if len(matched_terms) >= 2 or (score >= 0.25 and len(matched_terms) >= 1):
-            relevant_docs.append(doc)
+            relevant_docs.append(
+                {
+                    **doc,
+                    "_focus_match_count": len(matched_focus_phrases),
+                    "_matched_term_count": len(matched_terms),
+                }
+            )
 
     if not relevant_docs:
         steps.append("Grader: 0 chunks relevant to legal inquiry. Flagged insufficient_evidence.")
@@ -329,8 +341,21 @@ def grader_node(state: AgentState) -> dict[str, Any]:
             "reasoning_steps": steps,
         }
 
+    relevant_docs.sort(
+        key=lambda doc: (
+            doc.get("_focus_match_count", 0),
+            doc.get("_matched_term_count", 0),
+            float(doc.get("score", 0.0)),
+        ),
+        reverse=True,
+    )
+    for doc in relevant_docs:
+        doc.pop("_focus_match_count", None)
+        doc.pop("_matched_term_count", None)
+
     steps.append(
-        f"Grader: Verified {len(relevant_docs)}/{len(docs)} chunks meet legal relevance threshold."
+        f"Grader: Verified {len(relevant_docs)}/{len(docs)} chunks meet legal relevance threshold"
+        + (f" and match query focus: {focus_phrases}." if focus_phrases else ".")
     )
     return {
         "retrieved_documents": relevant_docs,
