@@ -307,9 +307,11 @@ make docker-down
 
 **Backend trên Render**
 1. Kết nối repository với Render và dùng Blueprint từ `render.yaml` (hoặc tạo Python Web Service với cùng build/start commands).
-2. Chọn gói dịch vụ phù hợp; Blueprint không khóa gói trả phí hay miễn phí.
+2. Blueprint chọn compute plan `free` cho demo. Nếu tạo Web Service thủ công thay vì dùng Blueprint, chọn **Free** ở bước chọn instance type.
 3. Thiết lập các biến môi trường được yêu cầu trong Render: `OPENAI_API_KEY` (Gemini), `QDRANT_URL`, `QDRANT_API_KEY`, và `CORS_ORIGINS`.
 4. `QDRANT_URL`/`QDRANT_API_KEY` phải trỏ tới Qdrant Cloud hoặc một Qdrant service bên ngoài có dữ liệu bền vững; không dùng filesystem tạm của web service Render để lưu collection.
+
+Gói Free phù hợp demo nhưng service có thể sleep khi không hoạt động, lần request đầu có thể khởi động chậm, và filesystem không bền vững. Render có thể yêu cầu phương thức thanh toán để xác minh workspace/tài khoản; cấu hình `plan: free` không thể bỏ qua yêu cầu xác minh billing do Render áp dụng. Không chọn gói trả phí nếu mục tiêu là demo miễn phí.
 
 **Frontend trên Vercel**
 1. Import cùng repository, đặt Root Directory là `web`.
