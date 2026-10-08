@@ -1,9 +1,11 @@
-.PHONY: help install dev lint format test eval docker-build docker-up docker-down clean
+.PHONY: help install dev web-dev web-build lint format test eval docker-build docker-up docker-down clean
 
 help:
 	@echo "Available commands:"
 	@echo "  make install       Install dependencies"
 	@echo "  make dev           Start development server"
+	@echo "  make web-dev       Start Next.js chat frontend"
+	@echo "  make web-build     Build Next.js chat frontend"
 	@echo "  make lint          Run code linter (ruff)"
 	@echo "  make format        Auto-format code (ruff)"
 	@echo "  make test          Run pytest suite"
@@ -18,6 +20,12 @@ install:
 
 dev:
 	uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
+
+web-dev:
+	cd web && npm run dev
+
+web-build:
+	cd web && npm run build
 
 lint:
 	ruff check .

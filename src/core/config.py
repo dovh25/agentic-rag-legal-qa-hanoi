@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     LOG_LEVEL: str = "INFO"
+    CORS_ORIGINS: str = "http://localhost:3000"
 
     # LLM Settings
     OPENAI_API_KEY: str | None = None

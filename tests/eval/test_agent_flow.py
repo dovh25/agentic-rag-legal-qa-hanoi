@@ -1,4 +1,7 @@
+from types import SimpleNamespace
+
 from src.agent.graph import create_agent_graph
+from src.agent.nodes import planner_node
 from src.agent.tools import check_document_validity
 
 
@@ -60,6 +63,32 @@ def test_agent_insufficient_evidence_flow():
     result = graph.invoke(initial_state)
     assert result["status"] == "insufficient_evidence"
     assert len(result.get("citations", [])) == 0
+
+
+def test_agent_rejects_unrelated_query_with_generic_document_word():
+    result = create_agent_graph().invoke(
+        {
+            "query": "Thủ tục xin visa du học Mỹ cần giấy tờ gì?",
+            "reasoning_steps": [],
+        }
+    )
+
+    assert result["status"] == "insufficient_evidence"
+    assert result.get("citations", []) == []
+
+
+def test_planner_respects_configured_maximum_and_keeps_district(monkeypatch):
+    monkeypatch.setattr("src.agent.nodes.get_settings", lambda: SimpleNamespace(MAX_SUBQUERIES=3))
+    result = planner_node(
+        {
+            "query": "So sánh thu hồi đất, bồi thường, tái định cư và giá đất",
+            "district": "Đông Anh",
+            "reasoning_steps": [],
+        }
+    )
+
+    assert 1 <= len(result["sub_queries"]) <= 3
+    assert all("Đông Anh" in query for query in result["sub_queries"])
 
 
 def test_document_validity():

@@ -275,6 +275,22 @@ Truy cập tài liệu API:
 - **Swagger UI**: [http://localhost:8000/docs](http://localhost:8000/docs)
 - **ReDoc**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
 
+**Khởi chạy giao diện Web Chat (Next.js)**
+Yêu cầu Node.js 20 trở lên. Mở terminal riêng:
+```bash
+cd web
+npm install
+cp .env.example .env.local
+npm run dev
+```
+Mở [http://localhost:3000](http://localhost:3000). API mặc định tại `http://localhost:8000`; có thể đổi bằng `NEXT_PUBLIC_API_BASE_URL` trong `web/.env.local`.
+
+**Nạp corpus P0/P1**
+```bash
+python scripts/run_ingest.py --tier mvp
+```
+Có thể chạy riêng `--tier p0` hoặc `--tier p1`. Pipeline chỉ chấp nhận văn bản có nguồn xác minh; văn bản không tải được hoặc PDF scan chưa trích xuất được sẽ báo lỗi, không sinh nội dung thay thế.
+
 **Cách 2: Khởi chạy bằng Docker Compose (Bao gồm Qdrant)**
 ```bash
 # Khởi động dịch vụ Qdrant Vector Store & API
@@ -286,6 +302,21 @@ docker compose logs -f
 # Dừng dịch vụ
 make docker-down
 ```
+
+### 4. Triển khai Cloud (Render API + Vercel Web)
+
+**Backend trên Render**
+1. Kết nối repository với Render và dùng Blueprint từ `render.yaml` (hoặc tạo Python Web Service với cùng build/start commands).
+2. Chọn gói dịch vụ phù hợp; Blueprint không khóa gói trả phí hay miễn phí.
+3. Thiết lập các biến môi trường được yêu cầu trong Render: `OPENAI_API_KEY` (Gemini), `QDRANT_URL`, `QDRANT_API_KEY`, và `CORS_ORIGINS`.
+4. `QDRANT_URL`/`QDRANT_API_KEY` phải trỏ tới Qdrant Cloud hoặc một Qdrant service bên ngoài có dữ liệu bền vững; không dùng filesystem tạm của web service Render để lưu collection.
+
+**Frontend trên Vercel**
+1. Import cùng repository, đặt Root Directory là `web`.
+2. Thêm biến `NEXT_PUBLIC_API_BASE_URL` với URL gốc Render, không kèm `/api/v1` (ví dụ `https://<render-service>.onrender.com`), rồi deploy.
+3. Thêm origin chính xác của website Vercel vào `CORS_ORIGINS` của Render, sau đó redeploy/restart backend. Nhiều origin có thể phân tách bằng dấu phẩy.
+
+Không commit `.env` hoặc gửi API keys qua chat. Nhập secrets trực tiếp trong dashboard Render. Trước khi mở dịch vụ cho người dùng, cần nạp và kiểm tra corpus P0 trên Qdrant Cloud; pipeline sẽ không thay thế văn bản pháp lý chưa tải/xác minh được bằng dữ liệu giả.
 
 ---
 

@@ -31,24 +31,37 @@ def run_evaluation(dataset_path: str = "eval/datasets/sample_questions.jsonl") -
             query = item["query"]
             expected_status = item.get("expected_status")
             expected_docs = item.get("expected_doc_ids", [])
+            expected_route = item.get("expected_route")
 
             logger.info(f"Running Eval [{item['id']}]: '{query}'")
-            result = graph.invoke({"query": query, "reasoning_steps": []})
+            result = graph.invoke(
+                {
+                    "query": query,
+                    "as_of_date": item.get("as_of_date"),
+                    "district": item.get("district"),
+                    "reasoning_steps": [],
+                }
+            )
 
             actual_status = result.get("status")
             status_match = actual_status == expected_status
+            route_match = expected_route is None or result.get("route") == expected_route
 
             citation_match = True
             if expected_docs:
                 cited_doc_ids = [c.get("doc_id") for c in result.get("citations", [])]
                 citation_match = any(doc_id in cited_doc_ids for doc_id in expected_docs)
 
-            if status_match and citation_match:
+            if status_match and route_match and citation_match:
                 passed += 1
-                logger.info(f"✓ Case {item['id']} passed (Status: {actual_status}).")
+                logger.info(
+                    f"✓ Case {item['id']} passed (Status: {actual_status}, "
+                    f"route: {result.get('route')})."
+                )
             else:
                 logger.warning(
-                    f"✗ Case {item['id']} failed. Expected status: {expected_status}, got: {actual_status}. "
+                    f"✗ Case {item['id']} failed. Expected status/route: "
+                    f"{expected_status}/{expected_route}, got: {actual_status}/{result.get('route')}. "
                     f"Expected docs: {expected_docs}, got: {[c.get('doc_id') for c in result.get('citations', [])]}"
                 )
 

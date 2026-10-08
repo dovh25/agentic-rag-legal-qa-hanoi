@@ -64,7 +64,10 @@ def router_node(state: AgentState) -> dict[str, Any]:
     steps = list(state.get("reasoning_steps", []))
 
     district = _extract_hanoi_district(query, state.get("district"))
-    as_of_date_applied = state.get("as_of_date") or str(date.today())
+    as_of_date = state.get("as_of_date")
+    as_of_date_applied = (
+        date.fromisoformat(as_of_date).isoformat() if as_of_date else str(date.today())
+    )
 
     # Check for ambiguous queries requiring clarification
     words = query.split()
@@ -123,27 +126,44 @@ def router_node(state: AgentState) -> dict[str, Any]:
 def planner_node(state: AgentState) -> dict[str, Any]:
     """Decompose complex multi-aspect questions into atomic sub-queries."""
     query = state.get("query", "")
-    district = state.get("district") or "Hà Nội"
+    district = state.get("district")
     steps = list(state.get("reasoning_steps", []))
     query_lower = query.lower()
-
+    settings = get_settings()
     sub_queries: list[str] = []
 
-    if "thu hồi" in query_lower and ("bồi thường" in query_lower or "tái định cư" in query_lower):
-        sub_queries = [
-            "Căn cứ điều kiện trường hợp thu hồi đất theo Luật Đất đai 2024",
-            f"Quy định bồi thường hỗ trợ tái định cư khi Nhà nước thu hồi đất tại {district}",
-        ]
-    elif "hạn mức" in query_lower and ("giá đất" in query_lower or "bảng giá" in query_lower):
-        sub_queries = [
-            f"Hạn mức giao đất ở và công nhận quyền sử dụng đất tại {district}",
-            f"Bảng giá đất và nguyên tắc áp dụng giá đất tại {district}",
-        ]
+    if "so sánh" in query_lower and ("2013" in query_lower or "2024" in query_lower):
+        for year in ("2013", "2024"):
+            if year in query_lower:
+                sub_queries.append(f"{query} - quy định Luật Đất đai {year}")
     else:
-        sub_queries = [
-            f"{query} - quy định chung theo Luật Đất đai",
-            f"{query} - quy định chi tiết áp dụng tại {district}",
+        aspects = (
+            ("thu hồi", "Căn cứ, điều kiện và trường hợp Nhà nước thu hồi đất"),
+            ("bồi thường", "Điều kiện và hình thức bồi thường về đất"),
+            ("tái định cư", "Điều kiện và việc bố trí tái định cư"),
+            ("hạn mức", "Hạn mức giao đất ở và công nhận quyền sử dụng đất"),
+            ("giá đất", "Bảng giá đất và nguyên tắc áp dụng giá đất"),
+        )
+        for trigger, aspect in aspects:
+            if trigger in query_lower:
+                sub_queries.append(f"{aspect}: {query}")
+
+    if not sub_queries:
+        conjunction_parts = [
+            part.strip(" ,?.")
+            for part in query_lower.replace(" đồng thời ", " và ").split(" và ")
+            if part.strip(" ,?.")
         ]
+        if len(conjunction_parts) > 1:
+            sub_queries = [f"{query}: {part}" for part in conjunction_parts]
+        else:
+            sub_queries = [query]
+
+    if district:
+        sub_queries = [
+            q if district.lower() in q.lower() else f"{q} tại {district}" for q in sub_queries
+        ]
+    sub_queries = list(dict.fromkeys(sub_queries))[: max(1, settings.MAX_SUBQUERIES)]
 
     steps.append(f"Planner: Decomposed into {len(sub_queries)} sub-queries: {sub_queries}")
     return {
@@ -158,6 +178,7 @@ def retrieval_node(state: AgentState) -> dict[str, Any]:
     as_of_date = state.get("as_of_date_applied")
     district = state.get("district")
     settings = get_settings()
+    max_results = state.get("max_results", settings.MAX_RETRIEVAL_RESULTS)
 
     queries_to_search = state.get("sub_queries") or [state.get("query", "")]
     all_docs: list[dict[str, Any]] = []
@@ -168,7 +189,7 @@ def retrieval_node(state: AgentState) -> dict[str, Any]:
             query=q,
             as_of_date=as_of_date,
             district=district,
-            limit=settings.MAX_RETRIEVAL_RESULTS,
+            limit=max_results,
         )
         for d in docs:
             key = (
@@ -256,7 +277,6 @@ def grader_node(state: AgentState) -> dict[str, Any]:
         "mục",
         "đích",
         "cấp",
-        "giấy",
         "tranh",
         "chấp",
         "nghị",
@@ -474,16 +494,37 @@ def verify_node(state: AgentState) -> dict[str, Any]:
         }
 
     # Verify official source URLs and non-empty snippets
+    from urllib.parse import urlparse
+
+    official_hosts = {"vanban.chinhphu.vn", "vbpl.vn", "congbao.hanoi.gov.vn"}
     verified_count = 0
     for cit in citations:
         source_url = cit.get("source_url")
         snippet = cit.get("snippet", "")
-        if source_url and snippet:
+        parsed_url = urlparse(source_url or "")
+        quoted_text = snippet[:-3] if snippet.endswith("...") else snippet
+        quote_matches_evidence = any(
+            quoted_text and quoted_text in str(doc.get("text", ""))
+            for doc in state.get("retrieved_documents", [])
+        )
+        if (
+            parsed_url.scheme == "https"
+            and parsed_url.hostname in official_hosts
+            and quote_matches_evidence
+        ):
             verified_count += 1
 
     steps.append(
         f"Verify: Passed citation provenance check ({verified_count}/{len(citations)} with official portal source URLs)."
     )
+    if verified_count != len(citations):
+        steps.append("Verify: Citation source or quote provenance failed; abstaining.")
+        return {
+            "status": "insufficient_evidence",
+            "answer": "Không đủ bằng chứng pháp lý có nguồn chính thức và trích đoạn kiểm chứng được.",
+            "citations": [],
+            "reasoning_steps": steps,
+        }
     return {
         "status": "answered",
         "reasoning_steps": steps,

@@ -10,6 +10,7 @@ class AgentState(TypedDict, total=False):
     as_of_date: str | None
     as_of_date_applied: str | None
     district: str | None
+    max_results: int
     route: str  # "single_hop", "multi_hop", "clarification"
     sub_queries: list[str]
     retrieved_documents: list[dict[str, Any]]

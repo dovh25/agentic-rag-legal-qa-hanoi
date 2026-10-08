@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Any
 
 from qdrant_client import QdrantClient
@@ -6,6 +7,38 @@ from qdrant_client.http import models as qmodels
 from src.core.config import get_settings
 from src.core.logging import logger
 from src.ingest.indexer import QdrantLegalIndexer
+
+DOCUMENT_NUMBER_TO_ID = {
+    "31/2024": "31-2024-QH15",
+    "31-2024": "31-2024-QH15",
+    "88/2024": "88-2024-ND-CP",
+    "88-2024": "88-2024-ND-CP",
+    "102/2024": "102-2024-ND-CP",
+    "102-2024": "102-2024-ND-CP",
+    "61/2024": "61-2024-QD-UBND",
+    "61-2024": "61-2024-QD-UBND",
+    "52/2025": "52-2025-NQ-HDND",
+    "52-2025": "52-2025-NQ-HDND",
+    "71/2024": "71-2024-ND-CP",
+    "71-2024": "71-2024-ND-CP",
+    "101/2024": "101-2024-ND-CP",
+    "101-2024": "101-2024-ND-CP",
+    "10/2024": "10-2024-TT-BTNMT",
+    "10-2024": "10-2024-TT-BTNMT",
+}
+
+
+def is_document_valid_on(metadata: dict[str, Any], as_of_date: date) -> bool:
+    """Return whether a document is in force on the inclusive target date."""
+    if metadata.get("legal_status", "active") != "active":
+        return False
+    effective_date = metadata.get("effective_date")
+    expiry_date = metadata.get("expiry_date")
+    if not effective_date:
+        return False
+    if date.fromisoformat(effective_date) > as_of_date:
+        return False
+    return not expiry_date or date.fromisoformat(expiry_date) >= as_of_date
 
 
 class HybridRetriever:
@@ -60,6 +93,7 @@ class HybridRetriever:
         top_k: int = 5,
     ) -> list[dict[str, Any]]:
         """Execute hybrid search with payload filtering."""
+        effective_date = date.fromisoformat(as_of_date) if as_of_date else date.today()
         client = self.get_client()
 
         if client and self._is_connected:
@@ -72,9 +106,12 @@ class HybridRetriever:
                     qmodels.FieldCondition(
                         key="legal_status",
                         match=qmodels.MatchValue(value="active"),
-                    )
+                    ),
+                    qmodels.FieldCondition(
+                        key="effective_date",
+                        range=qmodels.DatetimeRange(lte=effective_date),
+                    ),
                 ]
-
                 if district:
                     filter_conditions.append(
                         qmodels.FieldCondition(
@@ -84,19 +121,7 @@ class HybridRetriever:
                     )
 
                 # Prioritize explicit document number if specified in query
-                doc_map = {
-                    "52/2025": "52-2025-NQ-HDND",
-                    "52-2025": "52-2025-NQ-HDND",
-                    "61/2024": "61-2024-QD-UBND",
-                    "61-2024": "61-2024-QD-UBND",
-                    "88/2024": "88-2024-ND-CP",
-                    "88-2024": "88-2024-ND-CP",
-                    "102/2024": "102-2024-ND-CP",
-                    "102-2024": "102-2024-ND-CP",
-                    "31/2024": "31-2024-QH15",
-                    "31-2024": "31-2024-QH15",
-                }
-                for pattern, target_doc_id in doc_map.items():
+                for pattern, target_doc_id in DOCUMENT_NUMBER_TO_ID.items():
                     if pattern in query.lower():
                         filter_conditions.append(
                             qmodels.FieldCondition(
@@ -106,7 +131,15 @@ class HybridRetriever:
                         )
                         break
 
-                search_filter = qmodels.Filter(must=filter_conditions)
+                search_filter = qmodels.Filter(
+                    must=filter_conditions,
+                    must_not=[
+                        qmodels.FieldCondition(
+                            key="expiry_date",
+                            range=qmodels.DatetimeRange(lt=effective_date),
+                        )
+                    ],
+                )
 
                 # 3. Search in Qdrant (using modern query_points API)
                 if hasattr(client, "query_points"):
@@ -142,6 +175,7 @@ class HybridRetriever:
                             "text": payload.get("text", ""),
                             "source_url": payload.get("source_url"),
                             "effective_date": payload.get("effective_date"),
+                            "expiry_date": payload.get("expiry_date"),
                             "score": float(point.score),
                         }
                     )
@@ -151,7 +185,7 @@ class HybridRetriever:
                 logger.warning(f"Qdrant search error ({e}). Falling back to local matcher.")
 
         # Fallback offline retrieval based on lexical & legal entity matching
-        return self._offline_retrieve(query, as_of_date, district, top_k)
+        return self._offline_retrieve(query, effective_date.isoformat(), district, top_k)
 
     def _offline_retrieve(
         self,
@@ -168,22 +202,23 @@ class HybridRetriever:
         manifest_path = Path("data/corpus/raw/manifest.json")
 
         if not seed_dir.exists() or not manifest_path.exists():
-            # Return baseline legal seed chunks if files not yet created
-            return [
-                {
-                    "doc_id": "31-2024-QH15",
-                    "document_title": "Luật Đất đai số 31/2024/QH15",
-                    "document_number": "31/2024/QH15",
-                    "article_ref": "Điều 79",
-                    "clause": "Khoản 1",
-                    "text": "Nhà nước thu hồi đất để phát triển kinh tế - xã hội vì lợi ích quốc gia, công cộng nhằm phát huy nguồn lực đất đai, nâng cao hiệu quả sử dụng đất, phát triển hạ tầng kinh tế - xã hội.",
-                    "source_url": "https://vanban.chinhphu.vn/?classid=1&docid=211189",
-                    "effective_date": "2024-08-01",
-                    "score": 0.95,
-                }
-            ]
+            return []
 
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        target_date = date.fromisoformat(as_of_date) if as_of_date else date.today()
+        query_lower = query.lower()
+        requested_doc_id = next(
+            (
+                doc_id
+                for pattern, doc_id in DOCUMENT_NUMBER_TO_ID.items()
+                if pattern in query_lower
+            ),
+            None,
+        )
+        if requested_doc_id and not any(
+            item.get("doc_id") == requested_doc_id for item in manifest
+        ):
+            return []
         STOP_WORDS = {
             "và",
             "của",
@@ -253,7 +288,6 @@ class HybridRetriever:
             "mục",
             "đích",
             "cấp",
-            "giấy",
             "tranh",
             "chấp",
             "nghị",
@@ -277,11 +311,20 @@ class HybridRetriever:
         chunker = LegalChunker()
 
         for item in manifest:
-            seed_file = seed_dir / f"{item['doc_id']}.txt"
-            if not seed_file.exists():
+            if requested_doc_id and item.get("doc_id") != requested_doc_id:
+                continue
+            if item.get("legal_status", "active") != "active":
+                continue
+            if not is_document_valid_on(item, target_date):
                 continue
 
-            parsed_doc = parser.parse(seed_file.read_text(encoding="utf-8"), item)
+            text_file = Path(item.get("clean_text_path") or seed_dir / f"{item['doc_id']}.txt")
+            if not text_file.exists():
+                text_file = seed_dir / f"{item['doc_id']}.txt"
+            if not text_file.exists():
+                continue
+
+            parsed_doc = parser.parse(text_file.read_text(encoding="utf-8"), item)
             chunks = chunker.chunk_document(parsed_doc)
 
             for chunk in chunks:
@@ -315,6 +358,7 @@ class HybridRetriever:
                                 "text": chunk.text,
                                 "source_url": chunk.metadata.get("source_url"),
                                 "effective_date": chunk.metadata.get("effective_date"),
+                                "expiry_date": chunk.metadata.get("expiry_date"),
                                 "score": round(score, 4),
                             },
                         )
