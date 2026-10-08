@@ -7,7 +7,7 @@
 
 | Gate | Result | Evidence / remaining limit |
 |---|---|---|
-| Agent/API implementation and regressions | Pass locally | `pytest -q`: 62 passed; `ruff check .`: passed. |
+| Agent/API implementation and regressions | Pass locally | `pytest -q`: 65 passed; `ruff check .`: passed. |
 | Frontend build and dependency audit | Pass locally | `cd web && npm run build`: passed; `npm audit --audit-level=high`: 0 vulnerabilities. |
 | Current smoke set | Pass locally | `mvp_smoke_20.jsonl`: 20/20; status accuracy 1.0; route accuracy 1.0; Recall@5 1.0; abstention precision 1.0; grounded-citation rate 1.0. Run used deterministic local corpus fallback with cloud credentials absent. Evaluator graph duration excludes external HTTP/proxy latency and is not the PRD P95 gate. |
 | Citation and RAGAS metrics | Not measured | Existing smoke set has no lawyer-reviewed article/clause gold labels. No RAGAS model evaluation ran; reported citation accuracy and RAGAS values are `null`, not inferred from smoke pass. |
@@ -18,7 +18,7 @@
 | Ingest P1/P2 | Blocked | Verified official text, OCR review, and source provenance are not available for all required documents. |
 | Load and availability | Not measured | k6 script exists but k6 is unavailable locally; no dedicated staging run or continuous three-day uptime record. |
 | UX accessibility and SUS | Not measured | No 10-person pilot or SUS results. A successful production build does not constitute user-study evidence. |
-| CI | Added, not yet evidenced remotely | GitHub Actions workflow is present; no run result for the new workflow was observed during this check. |
+| CI / Preview | Partial | Vercel PR Preview check passed. GitHub Actions workflow is present, but no Actions run result for the new workflow was observed during this check. |
 
 ## Implemented code gates
 
