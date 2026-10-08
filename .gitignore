@@ -73,3 +73,7 @@ qdrant_storage/
 # Logs
 logs/
 *.log
+
+# Next.js frontend
+web/node_modules/
+web/.next/

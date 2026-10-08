@@ -1,4 +1,5 @@
 import json
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -59,41 +60,65 @@ def check_document_validity(doc_id: str, as_of_date: str | None = None) -> dict[
     """
     logger.info(f"Checking validity for doc_id='{doc_id}' as of date='{as_of_date}'")
     manifest_path = Path("data/corpus/raw/manifest.json")
-    if manifest_path.exists():
-        try:
-            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-            for doc in manifest:
-                if doc.get("doc_id") == doc_id or doc.get("document_number") == doc_id:
-                    eff_date = doc.get("effective_date")
-                    exp_date = doc.get("expiry_date")
-                    is_valid = True
-                    status_text = "Còn hiệu lực"
+    target_date = date.fromisoformat(as_of_date) if as_of_date else date.today()
+    if not manifest_path.exists():
+        logger.error(f"Cannot verify validity for {doc_id}: corpus manifest is missing.")
+        return {
+            "doc_id": doc_id,
+            "is_valid": False,
+            "status": "Không có manifest để xác minh hiệu lực",
+            "replaced_by": None,
+            "amendments": [],
+        }
 
-                    if as_of_date:
-                        if eff_date and as_of_date < eff_date:
-                            is_valid = False
-                            status_text = f"Chưa có hiệu lực (hiệu lực từ {eff_date})"
-                        elif exp_date and as_of_date > exp_date:
-                            is_valid = False
-                            status_text = f"Hết hiệu lực từ {exp_date}"
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        logger.error(f"Cannot verify validity for {doc_id}: invalid corpus manifest ({exc}).")
+        return {
+            "doc_id": doc_id,
+            "is_valid": False,
+            "status": "Manifest không hợp lệ, không thể xác minh hiệu lực",
+            "replaced_by": None,
+            "amendments": [],
+        }
 
-                    return {
-                        "doc_id": doc_id,
-                        "document_title": doc.get("document_title"),
-                        "effective_date": eff_date,
-                        "expiry_date": exp_date,
-                        "is_valid": is_valid,
-                        "status": status_text,
-                        "replaced_by": doc.get("replaced_by"),
-                        "amendments": doc.get("amendments", []),
-                    }
-        except Exception as e:
-            logger.warning(f"Error checking manifest for doc validity: {e}")
+    for doc in manifest:
+        if doc.get("doc_id") == doc_id or doc.get("document_number") == doc_id:
+            eff_date = doc.get("effective_date")
+            exp_date = doc.get("expiry_date")
+            legal_status = doc.get("legal_status", "active")
+            is_valid = bool(eff_date) and legal_status == "active"
+            status_text = "Còn hiệu lực" if is_valid else "Thiếu ngày hiệu lực, không thể xác minh"
 
+            if legal_status != "active":
+                status_text = (
+                    "Văn bản đã hết hiệu lực một phần hoặc được sửa đổi; "
+                    "cần xác minh hiệu lực theo từng điều khoản"
+                )
+            elif eff_date and date.fromisoformat(eff_date) > target_date:
+                is_valid = False
+                status_text = f"Chưa có hiệu lực (hiệu lực từ {eff_date})"
+            elif exp_date and date.fromisoformat(exp_date) < target_date:
+                is_valid = False
+                status_text = f"Hết hiệu lực từ {exp_date}"
+
+            return {
+                "doc_id": doc_id,
+                "document_title": doc.get("document_title"),
+                "effective_date": eff_date,
+                "expiry_date": exp_date,
+                "is_valid": is_valid,
+                "status": status_text,
+                "replaced_by": doc.get("replaced_by"),
+                "amendments": doc.get("amendments", []),
+            }
+
+    logger.warning(f"Cannot verify validity for unknown document {doc_id}.")
     return {
         "doc_id": doc_id,
-        "is_valid": True,
-        "status": "Còn hiệu lực",
+        "is_valid": False,
+        "status": "Không tìm thấy metadata hiệu lực của văn bản",
         "replaced_by": None,
         "amendments": [],
     }

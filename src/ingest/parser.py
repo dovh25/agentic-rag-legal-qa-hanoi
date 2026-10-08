@@ -29,6 +29,9 @@ class ParsedDocument:
     document_type: str
     issuing_body: str
     effective_date: str
+    expiry_date: str | None
+    replaced_by: str | None
+    legal_status: str
     source_url: str
     administrative_area: list[str]
     articles: list[ParsedArticle] = field(default_factory=list)
@@ -55,6 +58,9 @@ class VietnameseLegalParser:
             document_type=metadata.get("document_type", "luat"),
             issuing_body=metadata.get("issuing_body", ""),
             effective_date=metadata.get("effective_date", ""),
+            expiry_date=metadata.get("expiry_date"),
+            replaced_by=metadata.get("replaced_by"),
+            legal_status=metadata.get("legal_status", "active"),
             source_url=metadata.get("source_url", ""),
             administrative_area=metadata.get("administrative_area", ["Hà Nội"]),
         )

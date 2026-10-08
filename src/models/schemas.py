@@ -1,7 +1,8 @@
+from datetime import date
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class ResponseStatus(StrEnum):
@@ -56,9 +57,12 @@ class LegalQARequest(BaseModel):
     """Incoming user legal question request conforming to PRD Section 10."""
 
     query: str = Field(
-        ..., min_length=3, description="Legal question regarding land, planning, compensation, etc."
+        ...,
+        min_length=3,
+        max_length=500,
+        description="Legal question regarding land, planning, compensation, etc.",
     )
-    as_of_date: str | None = Field(
+    as_of_date: date | None = Field(
         None, description="Target legal validity date (YYYY-MM-DD). Defaults to current date."
     )
     district: str | None = Field(
@@ -73,6 +77,21 @@ class LegalQARequest(BaseModel):
     include_reasoning_steps: bool = Field(
         default=True, description="Whether to include agent reasoning trace in response"
     )
+
+    @field_validator("as_of_date", mode="before")
+    @classmethod
+    def validate_as_of_date(cls, value: Any) -> Any:
+        if value is None or isinstance(value, date):
+            return value
+        if not isinstance(value, str):
+            raise ValueError("as_of_date must use YYYY-MM-DD format")
+        try:
+            parsed = date.fromisoformat(value)
+        except ValueError as exc:
+            raise ValueError("as_of_date must use YYYY-MM-DD format") from exc
+        if parsed.isoformat() != value:
+            raise ValueError("as_of_date must use YYYY-MM-DD format")
+        return parsed
 
 
 class LegalQAResponse(BaseModel):
@@ -101,7 +120,7 @@ class FeedbackRequest(BaseModel):
     """User feedback payload conforming to PRD Section 10.3."""
 
     query_id: str = Field(..., description="Query ID or UUID")
-    rating: str = Field(..., description="'positive' or 'negative'")
+    rating: Literal["positive", "negative"] = Field(..., description="'positive' or 'negative'")
     comment: str | None = Field(None, description="Optional user comment")
 
 

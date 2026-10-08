@@ -1,3 +1,4 @@
+import argparse
 import asyncio
 import sys
 from pathlib import Path
@@ -14,13 +15,16 @@ from src.ingest.indexer import QdrantLegalIndexer  # noqa: E402
 from src.ingest.parser import VietnameseLegalParser  # noqa: E402
 
 
-async def main():
-    logger.info("=== Starting Automated Legal Corpus Ingestion (Corpus P0) ===")
-
+async def main(tier: str):
     # Step 1: Crawl / Fetch documents
     crawler = LegalCrawler()
-    manifest = await crawler.crawl_p0_corpus()
-    logger.info(f"Step 1 Complete: {len(manifest)} documents acquired.")
+    if tier == "p0":
+        manifest = await crawler.crawl_p0_corpus()
+    elif tier == "p1":
+        manifest = await crawler.crawl_p1_corpus()
+    else:
+        manifest = await crawler.crawl_mvp_corpus()
+    logger.info(f"Step 1 Complete: {len(manifest)} documents registered for {tier.upper()}.")
 
     # Step 2: Parse and Chunk
     parser = VietnameseLegalParser()
@@ -54,4 +58,13 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    argument_parser = argparse.ArgumentParser(description="Ingest Hanoi legal corpus.")
+    argument_parser.add_argument(
+        "--tier",
+        choices=["p0", "p1", "mvp"],
+        default="mvp",
+        help="Corpus tier to crawl and index (default: both MVP tiers).",
+    )
+    args = argument_parser.parse_args()
+    logger.info(f"=== Starting Automated Legal Corpus Ingestion ({args.tier.upper()}) ===")
+    asyncio.run(main(args.tier))

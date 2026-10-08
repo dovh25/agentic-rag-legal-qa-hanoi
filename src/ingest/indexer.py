@@ -68,25 +68,34 @@ class QdrantLegalIndexer:
                     ),
                 )
 
-                # Create Payload Indexes for fast metadata filtering (ADR-0004)
-                for field_name in [
-                    "doc_id",
-                    "legal_status",
-                    "document_number",
-                    "article_ref",
-                    "administrative_area",
-                    "effective_date",
-                ]:
-                    client.create_payload_index(
+                logger.info(f"Collection '{self.collection_name}' created successfully.")
+
+            collection_info = client.get_collection(collection_name=self.collection_name)
+            current_schema = collection_info.payload_schema or {}
+            index_schemas = {
+                "doc_id": qmodels.PayloadSchemaType.KEYWORD,
+                "legal_status": qmodels.PayloadSchemaType.KEYWORD,
+                "document_number": qmodels.PayloadSchemaType.KEYWORD,
+                "article_ref": qmodels.PayloadSchemaType.KEYWORD,
+                "administrative_area": qmodels.PayloadSchemaType.KEYWORD,
+                "effective_date": qmodels.PayloadSchemaType.DATETIME,
+                "expiry_date": qmodels.PayloadSchemaType.DATETIME,
+            }
+            for field_name, field_schema in index_schemas.items():
+                existing_schema = current_schema.get(field_name)
+                existing_type = getattr(existing_schema, "data_type", existing_schema)
+                if existing_type == field_schema:
+                    continue
+                if existing_schema is not None:
+                    client.delete_payload_index(
                         collection_name=self.collection_name,
                         field_name=field_name,
-                        field_schema=qmodels.PayloadSchemaType.KEYWORD,
                     )
-                logger.info(
-                    f"Collection '{self.collection_name}' and payload indexes created successfully."
+                client.create_payload_index(
+                    collection_name=self.collection_name,
+                    field_name=field_name,
+                    field_schema=field_schema,
                 )
-            else:
-                logger.info(f"Collection '{self.collection_name}' already exists in Qdrant.")
             return True
         except Exception as e:
             logger.warning(

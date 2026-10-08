@@ -1,11 +1,13 @@
 import hashlib
 import json
 from dataclasses import asdict, dataclass
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 
 import httpx
 from bs4 import BeautifulSoup
+from pypdf import PdfReader
 
 from src.core.logging import logger
 
@@ -23,6 +25,8 @@ class DocumentSource:
     source_url: str
     administrative_area: list[str]
     legal_domain: list[str]
+    legal_status: str = "active"
+    download_url: str | None = None
 
 
 P0_CORPUS_REGISTRY: list[DocumentSource] = [
@@ -93,6 +97,61 @@ P0_CORPUS_REGISTRY: list[DocumentSource] = [
     ),
 ]
 
+P1_CORPUS_REGISTRY: list[DocumentSource] = [
+    DocumentSource(
+        doc_id="71-2024-ND-CP",
+        document_number="71/2024/NĐ-CP",
+        document_title="Nghị định số 71/2024/NĐ-CP quy định về giá đất",
+        document_type="nghi_dinh",
+        issuing_body="Chính phủ",
+        issued_date="2024-06-27",
+        effective_date="2024-08-01",
+        expiry_date=None,
+        source_url="https://vanban.chinhphu.vn/?pageid=27160&docid=210523",
+        administrative_area=["Toàn quốc", "Hà Nội"],
+        legal_domain=["gia_dat", "dat_dai"],
+        legal_status="amended",
+        download_url="https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/7/71-cp.signed.pdf",
+    ),
+    DocumentSource(
+        doc_id="101-2024-ND-CP",
+        document_number="101/2024/NĐ-CP",
+        document_title=(
+            "Nghị định số 101/2024/NĐ-CP quy định về điều tra cơ bản đất đai; đăng ký, "
+            "cấp Giấy chứng nhận quyền sử dụng đất, quyền sở hữu tài sản gắn liền với đất "
+            "và Hệ thống thông tin đất đai"
+        ),
+        document_type="nghi_dinh",
+        issuing_body="Chính phủ",
+        issued_date="2024-07-29",
+        effective_date="2024-08-01",
+        expiry_date=None,
+        source_url="https://vanban.chinhphu.vn/?pageid=27160&docid=210791",
+        administrative_area=["Toàn quốc", "Hà Nội"],
+        legal_domain=["dat_dai", "dang_ky_dat_dai", "giay_chung_nhan"],
+        legal_status="amended",
+        download_url="https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/7/101-nd.signed.pdf",
+    ),
+    DocumentSource(
+        doc_id="10-2024-TT-BTNMT",
+        document_number="10/2024/TT-BTNMT",
+        document_title=(
+            "Thông tư số 10/2024/TT-BTNMT quy định về hồ sơ địa chính, Giấy chứng nhận "
+            "quyền sử dụng đất, quyền sở hữu tài sản gắn liền với đất"
+        ),
+        document_type="thong_tu",
+        issuing_body="Bộ Tài nguyên và Môi trường",
+        issued_date="2024-07-31",
+        effective_date="2024-08-01",
+        expiry_date=None,
+        source_url="https://vanban.chinhphu.vn/?pageid=27160&docid=210905&classid=1",
+        administrative_area=["Toàn quốc", "Hà Nội"],
+        legal_domain=["dat_dai", "dang_ky_dat_dai", "giay_chung_nhan"],
+        legal_status="active",
+        download_url="https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/8/10-btnmt.pdf",
+    ),
+]
+
 
 class LegalCrawler:
     """Automated Legal Document Crawler and Downloader (ADR-0003)."""
@@ -107,12 +166,12 @@ class LegalCrawler:
     ) -> dict[str, Any]:
         """Fetch HTML content from official portal, calculate SHA-256, and save snapshot."""
         logger.info(f"Crawling document [{source.doc_id}] from: {source.source_url}")
-        html_file = self.storage_dir / f"{source.doc_id}.html"
+        raw_file = self.storage_dir / f"{source.doc_id}{'.pdf' if source.download_url else '.html'}"
         text_file = self.storage_dir / f"{source.doc_id}.txt"
 
-        raw_html = ""
+        raw_content: str | bytes = ""
         clean_text = ""
-        status = "crawled"
+        status = "crawled_pdf" if source.download_url else "crawled"
 
         try:
             headers = {
@@ -124,28 +183,35 @@ class LegalCrawler:
                 "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
             }
             response = await client.get(
-                source.source_url, headers=headers, timeout=30.0, follow_redirects=True
+                source.download_url or source.source_url,
+                headers=headers,
+                timeout=30.0,
+                follow_redirects=True,
             )
             response.raise_for_status()
-            raw_html = response.text
-
-            # Parse and extract primary textual content
-            soup = BeautifulSoup(raw_html, "html.parser")
-            # Common main content containers in Vietnamese government portals
-            content_div = (
-                soup.find("div", class_="content")
-                or soup.find("div", id="content")
-                or soup.find("div", class_="doc-content")
-                or soup.find("div", class_="detail-content")
-                or soup.body
-            )
-
-            if content_div:
-                for tag in content_div(["script", "style", "nav", "footer", "header"]):
-                    tag.decompose()
-                clean_text = content_div.get_text(separator="\n", strip=True)
+            content_type = response.headers.get("content-type", "").lower()
+            is_pdf = "application/pdf" in content_type or response.content.startswith(b"%PDF")
+            if is_pdf:
+                raw_content = response.content
+                reader = PdfReader(BytesIO(response.content))
+                clean_text = "\n".join(page.extract_text() or "" for page in reader.pages).strip()
             else:
-                clean_text = soup.get_text(separator="\n", strip=True)
+                raw_content = response.text
+                soup = BeautifulSoup(raw_content, "html.parser")
+                content_div = (
+                    soup.find("div", class_="content")
+                    or soup.find("div", id="content")
+                    or soup.find("div", class_="doc-content")
+                    or soup.find("div", class_="detail-content")
+                    or soup.body
+                )
+
+                if content_div:
+                    for tag in content_div(["script", "style", "nav", "footer", "header"]):
+                        tag.decompose()
+                    clean_text = content_div.get_text(separator="\n", strip=True)
+                else:
+                    clean_text = soup.get_text(separator="\n", strip=True)
 
             # If portal response is only site navigation without articles (ASP.NET / client-side tab)
             if clean_text.count("Điều ") < 2:
@@ -155,6 +221,20 @@ class LegalCrawler:
                     clean_text = seed_file.read_text(encoding="utf-8")
                     raw_html = f"<html><body><pre>{clean_text}</pre></body></html>"
                     status = "verified_seed"
+                    raw_content = raw_html
+                elif raw_file.exists() and text_file.exists():
+                    raw_content = (
+                        raw_file.read_bytes()
+                        if raw_file.suffix == ".pdf"
+                        else raw_file.read_text(encoding="utf-8")
+                    )
+                    clean_text = text_file.read_text(encoding="utf-8")
+                    status = "cached"
+                else:
+                    raise ValueError(
+                        f"Official response for {source.document_number} did not contain "
+                        "a legal document body."
+                    )
 
         except Exception as e:
             logger.warning(
@@ -163,21 +243,27 @@ class LegalCrawler:
             seed_file = Path("data/corpus/seed") / f"{source.doc_id}.txt"
             if seed_file.exists():
                 clean_text = seed_file.read_text(encoding="utf-8")
-                raw_html = f"<html><body><pre>{clean_text}</pre></body></html>"
+                raw_content = f"<html><body><pre>{clean_text}</pre></body></html>"
                 status = "verified_seed"
-            elif html_file.exists():
-                raw_html = html_file.read_text(encoding="utf-8")
-                clean_text = (
-                    text_file.read_text(encoding="utf-8") if text_file.exists() else raw_html
+            elif raw_file.exists() and text_file.exists():
+                raw_content = (
+                    raw_file.read_bytes()
+                    if raw_file.suffix == ".pdf"
+                    else raw_file.read_text(encoding="utf-8")
                 )
+                clean_text = text_file.read_text(encoding="utf-8")
                 status = "cached"
             else:
-                clean_text = self._generate_bootstrap_content(source)
-                raw_html = f"<html><body><pre>{clean_text}</pre></body></html>"
-                status = "bootstrap"
+                raise RuntimeError(
+                    f"No verified official content, seed, or cache is available for "
+                    f"{source.document_number}."
+                ) from e
 
         # Save files
-        html_file.write_text(raw_html, encoding="utf-8")
+        if isinstance(raw_content, bytes):
+            raw_file.write_bytes(raw_content)
+        else:
+            raw_file.write_text(raw_content, encoding="utf-8")
         text_file.write_text(clean_text, encoding="utf-8")
 
         sha256 = hashlib.sha256(clean_text.encode("utf-8")).hexdigest()
@@ -186,69 +272,40 @@ class LegalCrawler:
             **asdict(source),
             "status": status,
             "sha256": sha256,
-            "raw_html_path": str(html_file),
+            "raw_document_path": str(raw_file),
             "clean_text_path": str(text_file),
             "character_count": len(clean_text),
         }
 
-    async def crawl_p0_corpus(self) -> list[dict[str, Any]]:
-        """Fetch all documents in the Corpus P0 registry and persist manifest."""
-        manifest: list[dict[str, Any]] = []
-        async with httpx.AsyncClient() as client:
-            for source in P0_CORPUS_REGISTRY:
-                item = await self.fetch_document(source, client)
-                manifest.append(item)
+    async def crawl_corpus(self, sources: list[DocumentSource]) -> list[dict[str, Any]]:
+        """Fetch a document tier and merge its records into the corpus manifest."""
+        existing: dict[str, dict[str, Any]] = {}
+        if self.manifest_path.exists():
+            existing = {
+                item["doc_id"]: item
+                for item in json.loads(self.manifest_path.read_text(encoding="utf-8"))
+            }
 
+        async with httpx.AsyncClient() as client:
+            for source in sources:
+                item = await self.fetch_document(source, client)
+                existing[source.doc_id] = item
+
+        manifest = list(existing.values())
         self.manifest_path.write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
         )
-        logger.info(f"Corpus P0 crawl complete. {len(manifest)} documents registered in manifest.")
+        logger.info(f"Crawl complete. {len(manifest)} documents registered in manifest.")
         return manifest
 
-    def _generate_bootstrap_content(self, source: DocumentSource) -> str:
-        """Seed verified official text structure for bootstrap and testing."""
-        if source.doc_id == "31-2024-QH15":
-            return (
-                f"{source.document_title}\n\n"
-                "Chương I: QUY ĐỊNH CHUNG\n\n"
-                "Điều 1. Phạm vi điều chỉnh\n"
-                "1. Luật này quy định về chế độ sở hữu đất đai, quyền hạn và trách nhiệm của Nhà nước đại diện chủ sở hữu toàn dân về đất đai và thống nhất quản lý về đất đai, chế độ quản lý và sử dụng đất đai, quyền và nghĩa vụ của công dân, người sử dụng đất đối với đất đai thuộc lãnh thổ của nước Cộng hòa xã hội chủ nghĩa Việt Nam.\n\n"
-                "Chương VI: THU HỒI ĐẤT, TRƯNG DỤNG ĐẤT\n\n"
-                "Điều 79. Thu hồi đất để phát triển kinh tế - xã hội vì lợi ích quốc gia, công cộng\n"
-                "1. Nhà nước thu hồi đất để thực hiện các dự án phát triển kinh tế - xã hội vì lợi ích quốc gia, công cộng nhằm phát huy nguồn lực đất đai, nâng cao hiệu quả sử dụng đất, phát triển hạ tầng kinh tế - xã hội theo hướng hiện đại, thực hiện chính sách an sinh xã hội, bảo vệ môi trường và bảo tồn di sản văn hóa.\n"
-                "2. Các trường hợp thu hồi đất bao gồm: xây dựng công trình giao thông, thủy lợi, cấp thoát nước, xử lý chất thải, năng lượng, chiếu sáng công cộng; xây dựng công trình hạ tầng kỹ thuật đô thị, nông thôn; xây dựng trụ sở cơ quan nhà nước, công trình sự nghiệp công lập.\n\n"
-                "Điều 94. Bồi thường về đất khi Nhà nước thu hồi đất vì mục đích quốc phòng, an ninh; phát triển kinh tế - xã hội vì lợi ích quốc gia, công cộng\n"
-                "1. Hộ gia đình, cá nhân đang sử dụng đất nông nghiệp khi Nhà nước thu hồi đất mà có đủ điều kiện được bồi thường theo quy định thì được bồi thường bằng đất nông nghiệp hoặc bằng tiền hoặc bằng đất có mục đích sử dụng khác với loại đất thu hồi hoặc bằng nhà ở.\n"
-                "2. Việc bồi thường về đất được thực hiện theo giá đất cụ thể của loại đất thu hồi do Ủy ban nhân dân cấp tỉnh quyết định tại thời điểm phê duyệt phương án bồi thường, hỗ trợ, tái định cư."
-            )
-        elif source.doc_id == "88-2024-ND-CP":
-            return (
-                f"{source.document_title}\n\n"
-                "Chương I: NHỮNG QUY ĐỊNH CHUNG\n\n"
-                "Điều 4. Bồi thường bằng đất có mục đích sử dụng khác với loại đất thu hồi hoặc bằng nhà ở\n"
-                "1. Việc bồi thường bằng đất có mục đích sử dụng khác với loại đất thu hồi hoặc bằng nhà ở quy định tại khoản 3 Điều 80, khoản 3 Điều 91 của Luật Đất đai được thực hiện theo quy định của Ủy ban nhân dân cấp tỉnh căn cứ vào quỹ đất, quỹ nhà ở hiện có tại địa phương.\n"
-                "2. Giá đất tính tiền sử dụng đất, tiền thuê đất khi bồi thường bằng đất có mục đích sử dụng khác là giá đất cụ thể do Ủy ban nhân dân cấp tỉnh quyết định tại thời điểm phê duyệt phương án bồi thường, hỗ trợ, tái định cư."
-            )
-        elif source.doc_id == "61-2024-QD-UBND":
-            return (
-                f"{source.document_title}\n\n"
-                "Chương II: QUY ĐỊNH CỤ THỂ VỀ BỒI THƯỜNG, HỖ TRỢ, TÁI ĐỊNH CƯ\n\n"
-                "Điều 14. Hạn mức giao đất ở cho cá nhân tại thành phố Hà Nội\n"
-                "1. Hạn mức giao đất ở cho cá nhân tại các phường thuộc các quận thuộc thành phố Hà Nội: không quá 90 m2/cá nhân.\n"
-                "2. Hạn mức giao đất ở cho cá nhân tại các xã thuộc các huyện đồng bằng: không quá 180 m2/cá nhân; tại các huyện trung du, miền núi: không quá 250 m2/cá nhân.\n\n"
-                "Điều 18. Bồi thường, hỗ trợ về đất nông nghiệp của hộ gia đình, cá nhân\n"
-                "1. Khi Nhà nước thu hồi đất nông nghiệp của hộ gia đình, cá nhân trực tiếp sản xuất nông nghiệp tại địa bàn thành phố Hà Nội, ngoài việc được bồi thường bằng tiền theo giá đất nông nghiệp quy định tại Bảng giá đất, còn được xem xét hỗ trợ đào tạo, chuyển đổi nghề và tìm kiếm việc làm bằng tiền theo quy định."
-            )
-        elif source.doc_id == "52-2025-NQ-HDND":
-            return (
-                f"{source.document_title}\n\n"
-                "Điều 1. Phạm vi áp dụng Bảng giá đất thành phố Hà Nội\n"
-                "1. Bảng giá đất này áp dụng từ ngày 01 tháng 01 năm 2026 trên toàn địa bàn thành phố Hà Nội làm căn cứ tính tiền sử dụng đất, tiền thuê đất, tính thuế sử dụng đất, tính lệ phí trong quản lý sử dụng đất đai.\n"
-                "2. Giá đất ở tại các tuyến đường phố thuộc quận Ba Đình, Hoàn Kiếm, Cầu Giấy, Đống Đa được xác định theo 4 vị trí: Vị trí 1 áp dụng cho thửa đất tiếp giáp đường phố chính; Vị trí 2, 3, 4 áp dụng cho thửa đất trong ngõ ngách theo hệ số quy định tại Phụ lục."
-            )
-        else:
-            return (
-                f"{source.document_title}\n\n"
-                "Điều 1. Phạm vi điều chỉnh và đối tượng áp dụng\n"
-                "1. Nghị định này quy định chi tiết thi hành một số điều của Luật Đất đai về tổ chức phát triển quỹ đất, quản lý quỹ đất, đăng ký đất đai, cấp giấy chứng nhận quyền sử dụng đất."
-            )
+    async def crawl_p0_corpus(self) -> list[dict[str, Any]]:
+        """Fetch all documents in the Corpus P0 registry."""
+        return await self.crawl_corpus(P0_CORPUS_REGISTRY)
+
+    async def crawl_p1_corpus(self) -> list[dict[str, Any]]:
+        """Fetch all documents in the Corpus P1 registry."""
+        return await self.crawl_corpus(P1_CORPUS_REGISTRY)
+
+    async def crawl_mvp_corpus(self) -> list[dict[str, Any]]:
+        """Fetch both MVP corpus tiers."""
+        return await self.crawl_corpus(P0_CORPUS_REGISTRY + P1_CORPUS_REGISTRY)

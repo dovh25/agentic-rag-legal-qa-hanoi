@@ -37,10 +37,10 @@ Gửi câu hỏi bằng ngôn ngữ tự nhiên để Agentic RAG xử lý (đ�
 }
 ```
 
-- `query` (*string, bắt buộc*): Câu hỏi pháp lý của người dùng (tối đa 500 ký tự).
-- `as_of_date` (*string, tùy chọn*): Mốc thời gian áp dụng luật theo định dạng `YYYY-MM-DD` (mặc định là ngày hiện tại).
+- `query` (*string, bắt buộc*): Câu hỏi pháp lý của người dùng (3–500 ký tự).
+- `as_of_date` (*string, tùy chọn*): Mốc thời gian áp dụng luật theo định dạng ngày ISO `YYYY-MM-DD`; ngày không hợp lệ trả `422` (mặc định là ngày hiện tại).
 - `district` (*string, tùy chọn*): Địa bàn quận/huyện tại Hà Nội để lọc chính sách địa phương.
-- `max_results` (*integer, tùy chọn, mặc định 5*): Số lượng đoạn trích tối đa cần lấy.
+- `max_results` (*integer, tùy chọn, mặc định 5, giới hạn 1–20*): Số lượng đoạn trích tối đa cần lấy.
 - `session_id` (*string, tùy chọn*): ID phiên hội thoại.
 - `include_reasoning_steps` (*boolean, tùy chọn, mặc định true*): Có trả về các bước suy luận của Agent hay không.
 
