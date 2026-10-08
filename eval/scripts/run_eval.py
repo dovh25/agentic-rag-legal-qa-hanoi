@@ -4,6 +4,7 @@ import math
 import sys
 from datetime import date
 from pathlib import Path
+from time import perf_counter
 from typing import Any
 
 # Add project root to sys.path for standalone script execution
@@ -128,7 +129,8 @@ def evaluate_dataset(
     correct_abstentions = 0
     citations_total = 0
     grounded_citations = 0
-    latencies = []
+    graph_durations = []
+    reported_latencies = []
     passed = 0
 
     for item in cases:
@@ -141,7 +143,9 @@ def evaluate_dataset(
         }
         if item.get("max_results") is not None:
             graph_input["max_results"] = item["max_results"]
+        started_at = perf_counter()
         result = graph.invoke(graph_input)
+        graph_durations.append((perf_counter() - started_at) * 1000)
         actual_status = result.get("status")
         actual_route = result.get("route")
         citations = result.get("citations") or []
@@ -215,7 +219,7 @@ def evaluate_dataset(
 
         latency = result.get("processing_time_ms")
         if isinstance(latency, (int, float)):
-            latencies.append(float(latency))
+            reported_latencies.append(float(latency))
 
         case_passed = status_match and route_match and citation_match
         passed += int(case_passed)
@@ -257,7 +261,11 @@ def evaluate_dataset(
         "grounded_citation_rate": (
             grounded_citations / citations_total if citations_total else None
         ),
-        "p95_latency_ms": _percentile_95(latencies),
+        "p95_graph_duration_ms": _percentile_95(graph_durations),
+        "p95_agent_reported_ms": _percentile_95(reported_latencies),
+        "latency_scope": (
+            "Measured around graph.invoke; excludes external HTTP/proxy request overhead."
+        ),
         "ragas_scores": None,
         "ragas_note": (
             "Not measured by this deterministic evaluator; requires a reviewed gold set "
@@ -283,7 +291,8 @@ def run_evaluation(
         f"gold-labelled citation accuracy={report['citation_accuracy']}; "
         f"abstention precision={report['abstention_precision']}; "
         f"grounded citation rate={report['grounded_citation_rate']}; "
-        f"P95={report['p95_latency_ms']} ms"
+        f"graph P95={report['p95_graph_duration_ms']} ms; "
+        f"agent-reported P95={report['p95_agent_reported_ms']} ms"
     )
     if output_path:
         output = Path(output_path)

@@ -9,7 +9,7 @@
 |---|---|---|
 | Agent/API implementation and regressions | Pass locally | `pytest -q`: 62 passed; `ruff check .`: passed. |
 | Frontend build and dependency audit | Pass locally | `cd web && npm run build`: passed; `npm audit --audit-level=high`: 0 vulnerabilities. |
-| Current smoke set | Pass locally | `mvp_smoke_20.jsonl`: 20/20; status accuracy 1.0; route accuracy 1.0; Recall@5 1.0; abstention precision 1.0; grounded-citation rate 1.0. Run used deterministic local corpus fallback with cloud credentials absent. |
+| Current smoke set | Pass locally | `mvp_smoke_20.jsonl`: 20/20; status accuracy 1.0; route accuracy 1.0; Recall@5 1.0; abstention precision 1.0; grounded-citation rate 1.0. Run used deterministic local corpus fallback with cloud credentials absent. Evaluator graph duration excludes external HTTP/proxy latency and is not the PRD P95 gate. |
 | Citation and RAGAS metrics | Not measured | Existing smoke set has no lawyer-reviewed article/clause gold labels. No RAGAS model evaluation ran; reported citation accuracy and RAGAS values are `null`, not inferred from smoke pass. |
 | Live API basic health | Pass at observation time | `GET /api/v1/health` returned HTTP 200, Qdrant `connected`, LLM `configured`, corpus size 81. This does not validate collection embedding compatibility with the new 768-dimensional contract. |
 | Live legal query | Partial / performance concern | One unauthenticated query returned HTTP 200 and cited Điều 14 of Quyết định 61/2024/QĐ-UBND. Observed request time was 11.49 seconds, exceeding the single-hop 8-second target for this sample. One request is not a P95 measurement. |

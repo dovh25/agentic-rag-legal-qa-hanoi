@@ -69,7 +69,9 @@ def test_evaluator_checks_gold_clause_retrieval_and_abstention(tmp_path):
     assert report["citation_accuracy"] == 1.0
     assert report["abstention_precision"] == 1.0
     assert report["grounded_citation_rate"] == 1.0
-    assert report["p95_latency_ms"] == 100.0
+    assert report["p95_graph_duration_ms"] >= 0
+    assert report["p95_agent_reported_ms"] == 100.0
+    assert "excludes external HTTP" in report["latency_scope"]
 
 
 def test_evaluator_requires_all_expected_documents_in_citations(tmp_path):
