@@ -1,11 +1,17 @@
 import hashlib
 import json
-from dataclasses import asdict, dataclass
+import re
+import unicodedata
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import urljoin
 
 import httpx
 from bs4 import BeautifulSoup
+from pypdf import PdfReader
+from rapidocr_onnxruntime import RapidOCR
 
 from src.core.logging import logger
 
@@ -23,6 +29,12 @@ class DocumentSource:
     source_url: str
     administrative_area: list[str]
     legal_domain: list[str]
+    corpus_tier: str = "P0"
+    source_authority: str = "vanban.chinhphu.vn"
+    scope: str = "national"
+    applicable_district: list[str] | None = None
+    attachment_url: str | None = None
+    attachment_urls: list[str] = field(default_factory=list)
 
 
 P0_CORPUS_REGISTRY: list[DocumentSource] = [
@@ -35,9 +47,15 @@ P0_CORPUS_REGISTRY: list[DocumentSource] = [
         issued_date="2024-01-18",
         effective_date="2024-08-01",
         expiry_date=None,
-        source_url="https://vanban.chinhphu.vn/?classid=1&docid=211189",
+        source_url="https://vanban.chinhphu.vn/?pageid=27160&docid=211189&classid=1",
         administrative_area=["Toàn quốc", "Hà Nội"],
         legal_domain=["dat_dai", "quy_hoach", "boi_thuong", "tai_dinh_cu"],
+        corpus_tier="P0",
+        attachment_urls=[
+            "https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/9/31-2024-qh15_1.pdf",
+            "https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/9/31-2024-qh15_2.pdf",
+            "https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/9/31-2024-qh15_3.pdf",
+        ],
     ),
     DocumentSource(
         doc_id="88-2024-ND-CP",
@@ -51,6 +69,8 @@ P0_CORPUS_REGISTRY: list[DocumentSource] = [
         source_url="https://vanban.chinhphu.vn/?classid=0&docid=210658",
         administrative_area=["Toàn quốc", "Hà Nội"],
         legal_domain=["boi_thuong", "ho_tro", "tai_dinh_cu"],
+        corpus_tier="P0",
+        attachment_url="https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/7/88nd.signed.pdf",
     ),
     DocumentSource(
         doc_id="102-2024-ND-CP",
@@ -61,9 +81,11 @@ P0_CORPUS_REGISTRY: list[DocumentSource] = [
         issued_date="2024-07-30",
         effective_date="2024-08-01",
         expiry_date=None,
-        source_url="https://vanban.chinhphu.vn/?classid=0&docid=210672",
+        source_url="https://vanban.chinhphu.vn/?pageid=27160&docid=210795",
         administrative_area=["Toàn quốc", "Hà Nội"],
         legal_domain=["dat_dai", "thi_hanh"],
+        corpus_tier="P0",
+        attachment_url="https://datafiles.chinhphu.vn/cpp/files/vbpq/2025/10/102-cp.signed.pdf",
     ),
     DocumentSource(
         doc_id="61-2024-QD-UBND",
@@ -74,9 +96,12 @@ P0_CORPUS_REGISTRY: list[DocumentSource] = [
         issued_date="2024-09-27",
         effective_date="2024-10-07",
         expiry_date=None,
-        source_url="https://congbao.hanoi.gov.vn/",
+        source_url="https://congbao.hanoi.gov.vn/Default.aspx?pageid=27188&p_gazette=1917",
         administrative_area=["Hà Nội"],
         legal_domain=["boi_thuong", "ho_tro", "tai_dinh_cu", "ha_noi"],
+        corpus_tier="P0",
+        source_authority="congbao.hanoi.gov.vn",
+        scope="provincial",
     ),
     DocumentSource(
         doc_id="52-2025-NQ-HDND",
@@ -87,9 +112,60 @@ P0_CORPUS_REGISTRY: list[DocumentSource] = [
         issued_date="2025-12-10",
         effective_date="2026-01-01",
         expiry_date=None,
-        source_url="https://congbao.hanoi.gov.vn/Default.aspx?p_attribute=5054&pageid=45002",
+        source_url="https://congbao.hanoi.gov.vn/chi-tiet-van-ban/ve-viec-quy-dinh-ve-bang-gia-dat-lan-dau-de-cong-bo-va-ap-dung-tu-ngay-01-thang-01-nam-2026-tren-di-228293",
         administrative_area=["Hà Nội"],
         legal_domain=["gia_dat", "bang_gia_dat", "ha_noi"],
+        corpus_tier="P0",
+        source_authority="congbao.hanoi.gov.vn",
+        scope="provincial",
+    ),
+]
+
+P1_CORPUS_REGISTRY: list[DocumentSource] = [
+    DocumentSource(
+        doc_id="71-2024-ND-CP",
+        document_number="71/2024/NĐ-CP",
+        document_title="Nghị định số 71/2024/NĐ-CP của Chính phủ quy định về giá đất",
+        document_type="nghi_dinh",
+        issuing_body="Chính phủ",
+        issued_date="2024-06-27",
+        effective_date="2024-08-01",
+        expiry_date=None,
+        source_url="https://vanban.chinhphu.vn/?pageid=27160&docid=210523",
+        administrative_area=["Toàn quốc", "Hà Nội"],
+        legal_domain=["gia_dat", "dat_dai"],
+        corpus_tier="P1",
+        attachment_url="https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/7/71-cp.signed.pdf",
+    ),
+    DocumentSource(
+        doc_id="101-2024-ND-CP",
+        document_number="101/2024/NĐ-CP",
+        document_title="Nghị định số 101/2024/NĐ-CP của Chính phủ quy định về điều tra cơ bản đất đai, đăng ký, cấp Giấy chứng nhận",
+        document_type="nghi_dinh",
+        issuing_body="Chính phủ",
+        issued_date="2024-07-29",
+        effective_date="2024-08-01",
+        expiry_date=None,
+        source_url="https://vanban.chinhphu.vn/?pageid=27160&docid=210791",
+        administrative_area=["Toàn quốc", "Hà Nội"],
+        legal_domain=["dat_dai", "dang_ky_dat_dai"],
+        corpus_tier="P1",
+        attachment_url="https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/7/101-nd.signed.pdf",
+    ),
+    DocumentSource(
+        doc_id="10-2024-TT-BTNMT",
+        document_number="10/2024/TT-BTNMT",
+        document_title="Thông tư số 10/2024/TT-BTNMT quy định về hồ sơ địa chính, Giấy chứng nhận quyền sử dụng đất",
+        document_type="thong_tu",
+        issuing_body="Bộ Tài nguyên và Môi trường",
+        issued_date="2024-07-31",
+        effective_date="2024-08-01",
+        expiry_date=None,
+        source_url="https://vanban.chinhphu.vn/?pageid=27160&docid=210905&classid=1",
+        administrative_area=["Toàn quốc", "Hà Nội"],
+        legal_domain=["dat_dai", "ho_so_dia_chinh"],
+        corpus_tier="P1",
+        attachment_url="https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/8/10-btnmt.pdf",
     ),
 ]
 
@@ -101,6 +177,7 @@ class LegalCrawler:
         self.storage_dir = Path(storage_dir)
         self.storage_dir.mkdir(parents=True, exist_ok=True)
         self.manifest_path = self.storage_dir / "manifest.json"
+        self._ocr = RapidOCR()
 
     async def fetch_document(
         self, source: DocumentSource, client: httpx.AsyncClient
@@ -113,6 +190,10 @@ class LegalCrawler:
         raw_html = ""
         clean_text = ""
         status = "crawled"
+        attachment_urls = list(source.attachment_urls)
+        if source.attachment_url:
+            attachment_urls.append(source.attachment_url)
+        attachment_url = attachment_urls[0] if attachment_urls else None
 
         try:
             headers = {
@@ -129,8 +210,14 @@ class LegalCrawler:
             response.raise_for_status()
             raw_html = response.text
 
-            # Parse and extract primary textual content
             soup = BeautifulSoup(raw_html, "html.parser")
+            if not attachment_url:
+                attachment = soup.select_one("a[href$='.pdf'], a[href*='.pdf?'], a[download][href]")
+                if attachment and attachment.get("href"):
+                    attachment_url = urljoin(str(response.url), attachment["href"])
+                    attachment_urls = [attachment_url]
+
+            # Parse and extract primary textual content
             # Common main content containers in Vietnamese government portals
             content_div = (
                 soup.find("div", class_="content")
@@ -147,24 +234,55 @@ class LegalCrawler:
             else:
                 clean_text = soup.get_text(separator="\n", strip=True)
 
+            if clean_text.count("Điều ") < 2 and attachment_urls:
+                extracted_pages: list[str] = []
+                for index, url in enumerate(attachment_urls, start=1):
+                    attachment_response = await client.get(
+                        url, headers=headers, timeout=60.0, follow_redirects=True
+                    )
+                    attachment_response.raise_for_status()
+                    pdf_file = self.storage_dir / f"{source.doc_id}-{index}.pdf"
+                    pdf_file.write_bytes(attachment_response.content)
+                    extracted = self._extract_pdf_text(pdf_file)
+                    if extracted.count("Điều ") < 2:
+                        extracted = self._ocr_pdf_text(pdf_file)
+                    extracted_pages.append(extracted)
+                clean_text = "\n\n".join(extracted_pages)
+                clean_text = self._normalize_ocr_structure(clean_text)
+                if clean_text.count("Điều ") < 2:
+                    status = "official_unextractable"
+                elif not self._matches_source(clean_text, source):
+                    status = "official_mismatch"
+                else:
+                    status = "official_verified"
+
             # If portal response is only site navigation without articles (ASP.NET / client-side tab)
-            if clean_text.count("Điều ") < 2:
+            if clean_text.count("Điều ") < 2 and status != "official_unextractable":
                 seed_file = Path("data/corpus/seed") / f"{source.doc_id}.txt"
                 if seed_file.exists():
-                    logger.info(f"Loaded verified seed text for [{source.doc_id}]")
+                    logger.warning(f"Loaded fallback seed text for [{source.doc_id}]")
                     clean_text = seed_file.read_text(encoding="utf-8")
                     raw_html = f"<html><body><pre>{clean_text}</pre></body></html>"
-                    status = "verified_seed"
+                    status = "fallback_unverified"
+            elif status == "crawled" and self._matches_source(clean_text, source):
+                status = "official_verified"
 
         except Exception as e:
-            logger.warning(
-                f"Failed to crawl live URL for {source.doc_id} ({e}). Checking local seed/cache."
-            )
+            logger.warning(f"Failed to crawl official source for {source.doc_id} ({e}).")
+            if source.attachment_url or source.attachment_urls or attachment_url:
+                clean_text = ""
+                raw_html = raw_html or f"<!-- official source unavailable: {e} -->"
+                status = "official_unavailable"
+                attachment_url = attachment_url or source.attachment_url
+                return self._write_manifest_item(
+                    source, html_file, text_file, raw_html, clean_text, status, attachment_url
+                )
+            logger.warning("Checking local seed/cache for local-only bootstrap.")
             seed_file = Path("data/corpus/seed") / f"{source.doc_id}.txt"
             if seed_file.exists():
                 clean_text = seed_file.read_text(encoding="utf-8")
                 raw_html = f"<html><body><pre>{clean_text}</pre></body></html>"
-                status = "verified_seed"
+                status = "fallback_unverified"
             elif html_file.exists():
                 raw_html = html_file.read_text(encoding="utf-8")
                 clean_text = (
@@ -174,36 +292,104 @@ class LegalCrawler:
             else:
                 clean_text = self._generate_bootstrap_content(source)
                 raw_html = f"<html><body><pre>{clean_text}</pre></body></html>"
-                status = "bootstrap"
+                status = "fallback_unverified"
 
         # Save files
         html_file.write_text(raw_html, encoding="utf-8")
         text_file.write_text(clean_text, encoding="utf-8")
 
-        sha256 = hashlib.sha256(clean_text.encode("utf-8")).hexdigest()
+        return self._write_manifest_item(
+            source, html_file, text_file, raw_html, clean_text, status, attachment_url
+        )
 
+    def _write_manifest_item(
+        self,
+        source: DocumentSource,
+        html_file: Path,
+        text_file: Path,
+        raw_html: str,
+        clean_text: str,
+        status: str,
+        attachment_url: str | None,
+    ) -> dict[str, Any]:
+        sha256 = hashlib.sha256(clean_text.encode("utf-8")).hexdigest()
+        html_file.write_text(raw_html, encoding="utf-8")
+        text_file.write_text(clean_text, encoding="utf-8")
         return {
             **asdict(source),
             "status": status,
             "sha256": sha256,
+            "source_fetched_at": datetime.now(UTC).isoformat(),
+            "parser_version": "parser-v2",
+            "corpus_version": "2026-10-09.1",
             "raw_html_path": str(html_file),
             "clean_text_path": str(text_file),
             "character_count": len(clean_text),
+            "attachment_url": attachment_url,
         }
 
-    async def crawl_p0_corpus(self) -> list[dict[str, Any]]:
-        """Fetch all documents in the Corpus P0 registry and persist manifest."""
+    @staticmethod
+    def _extract_pdf_text(pdf_path: Path) -> str:
+        """Extract a text layer before using OCR for scanned official PDFs."""
+        reader = PdfReader(str(pdf_path))
+        pages = [(page.extract_text() or "").strip() for page in reader.pages]
+        return "\n\n".join(page for page in pages if page)
+
+    def _ocr_pdf_text(self, pdf_path: Path) -> str:
+        import pypdfium2 as pdfium
+
+        document = pdfium.PdfDocument(str(pdf_path))
+        pages: list[str] = []
+        for page in document:
+            bitmap = page.render(scale=1.0)
+            result, _ = self._ocr(bitmap.to_numpy())
+            lines = []
+            for item in result or []:
+                if len(item) >= 2:
+                    lines.append((float(item[0][0][1]), str(item[1])))
+            lines.sort(key=lambda item: item[0])
+            pages.append("\n".join(text for _, text in lines))
+        return "\n\n".join(page for page in pages if page.strip())
+
+    @staticmethod
+    def _normalize_ocr_structure(text: str) -> str:
+        replacements = {
+            r"\bDIEU\b": "Điều",
+            r"\bCHUONG\b": "Chương",
+            r"\bMUC\b": "Mục",
+            r"\bKHOAN\b": "Khoản",
+        }
+        for pattern, replacement in replacements.items():
+            text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+        return text
+
+    @staticmethod
+    def _matches_source(text: str, source: DocumentSource) -> bool:
+        def compact(value: str) -> str:
+            normalized = unicodedata.normalize("NFKD", value)
+            normalized = normalized.replace("Đ", "D").replace("đ", "d")
+            return "".join(char for char in normalized.upper() if char.isalnum())
+
+        return compact(source.document_number) in compact(text)
+
+    async def crawl_corpus(
+        self, registry: list[DocumentSource] | None = None
+    ) -> list[dict[str, Any]]:
+        """Fetch the selected registry and persist a provenance manifest."""
         manifest: list[dict[str, Any]] = []
         async with httpx.AsyncClient() as client:
-            for source in P0_CORPUS_REGISTRY:
+            for source in registry or [*P0_CORPUS_REGISTRY, *P1_CORPUS_REGISTRY]:
                 item = await self.fetch_document(source, client)
                 manifest.append(item)
 
         self.manifest_path.write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
         )
-        logger.info(f"Corpus P0 crawl complete. {len(manifest)} documents registered in manifest.")
+        logger.info(f"Corpus crawl complete. {len(manifest)} documents registered in manifest.")
         return manifest
+
+    async def crawl_p0_corpus(self) -> list[dict[str, Any]]:
+        return await self.crawl_corpus(P0_CORPUS_REGISTRY)
 
     def _generate_bootstrap_content(self, source: DocumentSource) -> str:
         """Seed verified official text structure for bootstrap and testing."""

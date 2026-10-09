@@ -138,6 +138,8 @@ async def health_check() -> HealthResponse:
         qdrant=qdrant_status,
         llm=llm_status,
         corpus_size=corpus_size,
+        active_collection=settings.QDRANT_ACTIVE_ALIAS,
+        corpus_version=settings.CORPUS_VERSION,
     )
 
 

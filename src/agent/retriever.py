@@ -56,8 +56,8 @@ class HybridRetriever:
     def _is_valid_as_of(payload: dict[str, Any], as_of_date: str | None) -> bool:
         if not as_of_date:
             return True
-        effective_date = payload.get("effective_date")
-        expiry_date = payload.get("expiry_date")
+        effective_date = payload.get("effective_from") or payload.get("effective_date")
+        expiry_date = payload.get("effective_to") or payload.get("expiry_date")
         return not (
             (effective_date and effective_date > as_of_date)
             or (expiry_date and expiry_date < as_of_date)
@@ -106,6 +106,12 @@ class HybridRetriever:
                     "102-2024": "102-2024-ND-CP",
                     "31/2024": "31-2024-QH15",
                     "31-2024": "31-2024-QH15",
+                    "71/2024": "71-2024-ND-CP",
+                    "71-2024": "71-2024-ND-CP",
+                    "101/2024": "101-2024-ND-CP",
+                    "101-2024": "101-2024-ND-CP",
+                    "10/2024": "10-2024-TT-BTNMT",
+                    "10-2024": "10-2024-TT-BTNMT",
                 }
                 for pattern, target_doc_id in doc_map.items():
                     if pattern in query.lower():
@@ -141,20 +147,22 @@ class HybridRetriever:
                     payload = point.payload or {}
                     if not self._is_valid_as_of(payload, as_of_date):
                         continue
-                    doc_title = payload.get("document_title", "")
-                    art_ref = payload.get("article_ref")
+                    doc_title = payload.get("doc_title") or payload.get("document_title", "")
+                    art_ref = payload.get("article") or payload.get("article_ref")
                     results.append(
                         {
                             "doc_id": payload.get("doc_id", ""),
                             "document_title": doc_title,
                             "title": doc_title,
-                            "document_number": payload.get("document_number", ""),
+                            "document_number": payload.get("doc_number")
+                            or payload.get("document_number", ""),
                             "article_ref": art_ref,
                             "article": art_ref,
                             "clause": payload.get("clause"),
                             "text": payload.get("text", ""),
                             "source_url": payload.get("source_url"),
-                            "effective_date": payload.get("effective_date"),
+                            "effective_date": payload.get("effective_from")
+                            or payload.get("effective_date"),
                             "score": float(point.score),
                         }
                     )

@@ -43,14 +43,23 @@ nhập trực tiếp các biến sau vào Environment; trên Vercel chỉ nhập
 
 ## Bootstrap Qdrant Cloud
 
-1. Tạo collection `legal_chunks` với cosine distance và dimension 1024.
+1. Dùng collection alias `legal_chunks`; không xóa collection đang active trực tiếp.
 2. Cấu hình `QDRANT_URL` và `QDRANT_API_KEY` local trong `.env` (không chia sẻ giá trị).
-3. Chạy `python scripts/run_ingest.py` từ môi trường có quyền ghi collection.
-4. Kiểm tra `GET <render-url>/api/v1/health`: `qdrant=connected` và `corpus_size > 0`.
-5. Chỉ bắt đầu demo sau khi kiểm tra một câu trả lời có citation URL chính thức.
+3. Kiểm tra trước khi index:
+   `PYTHONPATH=. python scripts/run_ingest.py --include-p1 --validate-only --report /tmp/corpus.json`.
+4. Tạo collection version mới, index, validate rồi promote:
+   `PYTHONPATH=. python scripts/run_ingest.py --include-p1 --target-collection legal_chunks_v2 --promote`.
+   Lệnh này chỉ promote khi schema, provenance và tính duy nhất của chunk hợp lệ.
+5. Kiểm tra `GET <render-url>/api/v1/health`: `qdrant=connected` và `corpus_size > 0`.
+6. Chỉ bắt đầu demo sau khi kiểm tra một câu trả lời có citation URL chính thức.
 
-Script ingestion có thể chạy lại nhờ point ID deterministic; vẫn phải kiểm tra count,
-ngày hiệu lực và metadata sau mỗi lần cập nhật corpus.
+Các collection version cũ phải được giữ lại để rollback. Rollback là thao tác promote alias
+về version trước, sau khi kiểm tra health và một truy vấn smoke test; không dùng thao tác
+delete collection production. Seed/fallback không được promote lên cloud nếu chưa xác minh
+nguồn chính thức; `official_mismatch`, `official_unextractable` và `official_unavailable`
+cũng bị chặn. Crawler hiện tải attachment PDF chính thức và dùng OCR local cho bản scan,
+đồng thời đối chiếu số hiệu văn bản trước khi gắn trạng thái `official_verified`.
+`--allow-unverified` chỉ dành cho kiểm tra local.
 
 ## Deploy và smoke test
 

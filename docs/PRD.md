@@ -608,14 +608,18 @@ gantt
 
 ### 13.3 Phase Chi tiết
 
-**Tuần 1 — Foundation & Agent Core** (Đã hoàn thành - 100%)
+**Tuần 1 — Foundation & Agent Core** (Rebuild hoàn tất; production promotion cần snapshot chính thức)
 - [x] Khởi tạo project structure (DONE)
 - [x] Core config & logging setup (Loguru JSON structured logging)
-- [x] Qdrant Cloud setup + schema definition (`legal_chunks` 1024-dim Cosine, payload indexes)
-- [x] Document ingestion pipeline (Automated crawler, hierarchical parser, breadcrumb chunker)
-- [x] Ingest corpus P0 (81 chunks: Luật 31/2024, NĐ 88/2024, NĐ 102/2024, QĐ 61/2024 Hà Nội, NQ 52/2025 Hà Nội)
+- [x] Qdrant versioned collection + alias promotion/rollback (`legal_chunks_vN` -> `legal_chunks`)
+- [x] Document ingestion pipeline với canonical schema, provenance, checksum và validation report
+- [x] Parser phân cấp Chương/Mục/Điều/Khoản/Điểm và chunk deterministic có breadcrumb
+- [x] Dry-run P0 + P1: 8 tài liệu, 81 chunks, 0 validation issues; fallback seed bị chặn promote
+- [ ] Hoàn tất snapshot chính thức P0/P1 và index lên Qdrant Cloud sau manual/source verification
+  (P0 hiện đã xác minh 4/5; Nghị định 102 cần attachment đúng toàn văn, không dùng file
+  `10qd.signed.pdf` bị portal trả nhầm)
 - [x] Core Agent nodes (Router, Hybrid Retriever, Grader, Synthesize LLM + fallback, Verify, Clarify)
-- [x] Test suite passing: 18/18 pytest (unit & integration), 5/5 eval benchmark
+- [x] Test suite passing: 22 pytest unit tests; Ruff format/check passing
 
 **Tuần 2 — MVP Complete**
 - [ ] Planner node (sub-query decomposition)

@@ -1,3 +1,4 @@
+from src.ingest.crawler import DocumentSource, LegalCrawler
 from src.ingest.parser import VietnameseLegalParser
 
 
@@ -55,3 +56,34 @@ def test_parse_empty_or_unstructured_text():
 
     assert parsed_doc.doc_id == "empty-doc"
     assert len(parsed_doc.articles) == 0
+
+
+def test_parse_section_and_normalize_whitespace():
+    parser = VietnameseLegalParser()
+    parsed = parser.parse(
+        "Chương I\nMục 2. Quy định chung\nĐiều 3. Phạm vi\n1.  Nội dung   có khoảng trắng thừa.",
+        {"doc_id": "section-doc", "document_title": "T", "document_number": "1"},
+    )
+    article = parsed.articles[0]
+    assert article.section_number == "2"
+    assert article.section_title == "Quy định chung"
+    assert "Nội dung có khoảng trắng thừa." in article.clauses[0].text
+
+
+def test_official_ocr_normalization_and_identity_check():
+    source = DocumentSource(
+        doc_id="88-2024-ND-CP",
+        document_number="88/2024/NĐ-CP",
+        document_title="Nghị định",
+        document_type="nghi_dinh",
+        issuing_body="Chính phủ",
+        issued_date="2024-07-15",
+        effective_date="2024-08-01",
+        expiry_date=None,
+        source_url="https://example.com",
+        administrative_area=["Toàn quốc"],
+        legal_domain=["dat_dai"],
+    )
+    text = LegalCrawler._normalize_ocr_structure("Số: 88/2024/ND-CP\nDIEU 1. Phạm vi điều chỉnh")
+    assert "Điều 1" in text
+    assert LegalCrawler._matches_source(text, source)
