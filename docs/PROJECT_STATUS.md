@@ -12,7 +12,7 @@
 | Backend Render | ✅ Hoạt động | HTTP 200 `/health` |
 | API contract | ✅ Đã deploy | `/api/v1/query`, `/api/v1/health`, `/api/v1/feedback` |
 | Qdrant Cloud | ✅ Connected | Health production báo `qdrant=connected` |
-| LLM provider | ✅ Configured | Health production báo `llm=configured` |
+| LLM provider | ⚠️ Chờ cấu hình secret | Mistral `mistral-small-latest`; key chỉ đặt trong Render secret |
 | Corpus production | ✅ Rebuilt/promoted | `legal_chunks` alias → `legal_chunks_20261009_2`, 1.956 chunks |
 | LangGraph flow | ✅ Đã lắp ráp | Router → planner/clarification/retrieval → grader → synthesis → verify |
 | OCR/canonical rebuild | ✅ Đã promote | 5 P0 snapshots chính thức, validation 0 lỗi |
@@ -64,6 +64,7 @@ Chưa thể tuyên bố MVP hoàn thiện theo PRD vì:
    security audit và manual hallucination audit.
 
 **Đánh giá:** MVP hiện ở mức **deployed demo / conditional MVP**, chưa phải **validated MVP**.
+Go có điều kiện chỉ được xem xét sau khi hoàn tất [acceptance matrix](GO_NO_GO_ACCEPTANCE.md).
 
 ## Có đủ điều kiện bắt đầu Tuần 3 không?
 

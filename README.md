@@ -92,7 +92,7 @@ flowchart TD
         RETRIEVER --> GRADER["Grader Node\n(Kiểm tra độ liên quan bằng chứng)"]
         
         GRADER -- "Không đủ bằng chứng" --> ABSTAIN(["status: insufficient_evidence"])
-        GRADER -- "Đủ bằng chứng" --> SYNTHESIS["Synthesis Node\n(Evidence-Grounded Google Gemini)"]
+        GRADER -- "Đủ bằng chứng" --> SYNTHESIS["Synthesis Node\n(Evidence-Grounded Mistral)"]
         
         SYNTHESIS --> VERIFY["Citation Verifier Node\n(So khớp trích dẫn & URL nguồn)"]
         VERIFY --> ANSWER(["status: answered\n+ Citations & URL"])
@@ -326,7 +326,7 @@ make eval
 ## ☁️ Cloud demo MVP
 
 Topology triển khai công khai ưu tiên free tier: **Next.js trên Vercel**, **FastAPI
-container trên Render**, **Qdrant Cloud Free** và Gemini/provider tương thích. Render là
+container trên Render**, **Qdrant Cloud Free** và Mistral/provider tương thích. Render là
 runtime stateless; vector index không lưu trên filesystem ephemeral. Secrets chỉ cấu hình
 trực tiếp ở provider, còn local development có thể đọc từ `.env` nhưng không được commit
 hoặc log giá trị. Xem [docs/deployment/MVP_CLOUD.md](docs/deployment/MVP_CLOUD.md); frontend

@@ -146,7 +146,7 @@ Gửi câu hỏi bằng ngôn ngữ tự nhiên để Agentic RAG xử lý (đ�
 
 ### 2.2 `GET /api/v1/health` (Kiểm tra Sức khỏe Hệ thống & Corpus)
 
-Kiểm tra trạng thái kết nối với Qdrant Vector Cloud và mô hình suy luận LLM (Gemini), đồng thời báo cáo số lượng chunks văn bản pháp lý đang có trong hệ thống.
+Kiểm tra trạng thái kết nối với Qdrant Vector Cloud và mô hình suy luận LLM (Mistral mặc định), đồng thời báo cáo số lượng chunks văn bản pháp lý đang có trong hệ thống.
 
 #### Response (200 OK)
 ```json

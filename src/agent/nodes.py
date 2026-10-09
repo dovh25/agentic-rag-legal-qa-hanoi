@@ -361,15 +361,14 @@ def synthesize_node(state: AgentState) -> dict[str, Any]:
             }
         )
 
-    # Attempt LLM synthesis via OpenAI-compatible endpoint (Google Gemini / Groq / Free Provider)
+    # Attempt LLM synthesis via the configured OpenAI-compatible provider.
     settings = get_settings()
     llm_answer: str | None = None
 
     is_valid_key = (
         settings.OPENAI_API_KEY
         and settings.OPENAI_API_KEY.strip()
-        and "your-gemini-api-key" not in settings.OPENAI_API_KEY
-        and "your-groq-api-key" not in settings.OPENAI_API_KEY
+        and "your-" not in settings.OPENAI_API_KEY.lower()
     )
 
     if is_valid_key:

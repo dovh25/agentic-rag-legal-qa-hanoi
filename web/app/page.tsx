@@ -74,15 +74,24 @@ export default function Home() {
   const [error, setError] = useState("");
   const [district, setDistrict] = useState("");
   const [asOfDate, setAsOfDate] = useState("");
+  const [theme, setTheme] = useState<"light" | "dark">("light");
 
   const active = useMemo(() => conversations.find((item) => item.id === activeId), [conversations, activeId]);
 
   useEffect(() => {
+    const savedTheme = window.localStorage.getItem("legal-qa-theme");
+    if (savedTheme === "dark") setTheme("dark");
     readConversations().then((items) => {
       setConversations(items);
       if (items[0]) setActiveId(items[0].id);
     }).catch(() => setError("Không thể mở lịch sử chat trên trình duyệt."));
   }, []);
+
+  function toggleTheme() {
+    const next = theme === "light" ? "dark" : "light";
+    setTheme(next);
+    window.localStorage.setItem("legal-qa-theme", next);
+  }
 
   function newChat() {
     const conversation = { id: uid(), title: "Phiên chat mới", updatedAt: Date.now(), messages: [] };
@@ -169,7 +178,7 @@ export default function Home() {
   }
 
   return (
-    <main className="chat-app">
+    <main className={`chat-app theme-${theme}`}>
       <aside className="sidebar" aria-label="Lịch sử phiên chat">
         <div className="brand"><span>⚖</span><strong>Legal QA Hà Nội</strong></div>
         <button className="new-chat" onClick={newChat}>＋ Chat mới</button>
@@ -189,6 +198,7 @@ export default function Home() {
           <div className="filters">
             <input aria-label="Quận huyện" value={district} onChange={(event) => setDistrict(event.target.value)} placeholder="Quận/huyện" />
             <input aria-label="Ngày áp dụng" type="date" value={asOfDate} onChange={(event) => setAsOfDate(event.target.value)} />
+            <button className="theme-toggle" type="button" onClick={toggleTheme} aria-label="Đổi giao diện sáng tối">{theme === "light" ? "☾" : "☀"}</button>
           </div>
         </header>
         <div className="transcript" aria-live="polite">
