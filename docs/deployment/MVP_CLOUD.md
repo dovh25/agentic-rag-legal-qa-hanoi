@@ -53,6 +53,16 @@ nhập trực tiếp các biến sau vào Environment; trên Vercel chỉ nhập
 5. Kiểm tra `GET <render-url>/api/v1/health`: `qdrant=connected` và `corpus_size > 0`.
 6. Chỉ bắt đầu demo sau khi kiểm tra một câu trả lời có citation URL chính thức.
 
+Production demo hiện tại:
+
+- API: <https://agentic-rag-legal-qa-api.onrender.com>
+- Web: <https://agentic-rag-legal-qa-hanoi.vercel.app>
+- Health đã kiểm tra ngày 2026-10-09: `healthy`, Qdrant `connected`, LLM `configured`,
+  `corpus_size=1956` after the 2026-10-09.2 collection promotion.
+- Backend must be redeployed with `CORPUS_VERSION=2026-10-09.2`; the Qdrant alias is already
+  promoted and the 81-point legacy collection is retained for rollback.
+  đã được promote. Xem [project status](../PROJECT_STATUS.md).
+
 Các collection version cũ phải được giữ lại để rollback. Rollback là thao tác promote alias
 về version trước, sau khi kiểm tra health và một truy vấn smoke test; không dùng thao tác
 delete collection production. Seed/fallback không được promote lên cloud nếu chưa xác minh

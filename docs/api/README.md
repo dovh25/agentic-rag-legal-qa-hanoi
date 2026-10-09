@@ -6,6 +6,8 @@
 Production demo chạy FastAPI trên Render; frontend Vercel gọi qua
 `NEXT_PUBLIC_API_BASE_URL`. Health và error behavior trong cloud được kiểm tra theo
 [MVP cloud runbook](../deployment/MVP_CLOUD.md).
+Production URLs và kết quả kiểm tra hiện tại được ghi tại
+[project status](../PROJECT_STATUS.md).
 
 ---
 
@@ -78,7 +80,7 @@ Gửi câu hỏi bằng ngôn ngữ tự nhiên để Agentic RAG xử lý (đ�
   ],
   "reasoning_steps": [
     "Router: Phân loại câu hỏi dạng Single-hop",
-    "Retriever: Tìm kiếm trên Qdrant collection legal_chunks với hybrid BGE-M3 + BM25",
+    "Retriever: Tìm kiếm dense BGE-M3 trên collection legal_chunks với payload filtering",
     "Grader: Đánh giá độ liên quan pháp lý, giữ lại 4/5 chunks phù hợp",
     "Synthesizer: Tổng hợp căn cứ pháp lý từ văn bản quy phạm pháp luật",
     "Verifier: Kiểm tra 100% trích dẫn nguồn Cổng VBPL & Công báo Hà Nội"
@@ -153,9 +155,16 @@ Kiểm tra trạng thái kết nối với Qdrant Vector Cloud và mô hình suy
   "version": "1.0.0",
   "qdrant": "connected",
   "llm": "connected",
-  "corpus_size": 81
+  "corpus_size": 1956,
+  "active_collection": "legal_chunks",
+  "corpus_version": "2026-10-09.2"
 }
 ```
+
+Qdrant hiện đã có alias `legal_chunks` trỏ tới collection `legal_chunks_20261009_2`
+với 1.956 chunk P0 đã validation; collection rollback `legal_chunks_legacy_20261009_1`
+giữ lại 81 chunk cũ. Health của backend chỉ phản ánh `CORPUS_VERSION` sau khi Render
+được redeploy.
 
 ---
 

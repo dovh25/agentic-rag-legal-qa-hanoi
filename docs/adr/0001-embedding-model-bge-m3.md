@@ -5,6 +5,10 @@
 - **Người quyết định**: Vũ Huy Đô (Senior AI Engineer / Tech Lead)
 - **Tài liệu liên quan**: [docs/PRD.md](../PRD.md), [docs/Brief.md](../Brief.md), [.agents/skills/legal-corpus-ingest/SKILL.md](../../.agents/skills/legal-corpus-ingest/SKILL.md)
 
+> **Implementation note (2026-10-09):** Dense 1024-dim là phần đang được sử dụng. Sparse
+> lexical weights/BM25 của BGE-M3 chưa được materialize thành sparse index trong Qdrant
+> production; không được mô tả là đã active cho tới khi có implementation và benchmark.
+
 ---
 
 ## 1. Bối cảnh & Vấn đề (Context)

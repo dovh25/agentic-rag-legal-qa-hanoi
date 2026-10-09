@@ -621,15 +621,18 @@ gantt
 - [x] Core Agent nodes (Router, Hybrid Retriever, Grader, Synthesize LLM + fallback, Verify, Clarify)
 - [x] Test suite passing: 22 pytest unit tests; Ruff format/check passing
 
-**Tuần 2 — MVP Complete**
-- [ ] Planner node (sub-query decomposition)
-- [ ] Clarifier node (clarification request)
-- [ ] `as_of_date` temporal filter logic
-- [ ] LangGraph graph assembly
-- [ ] FastAPI endpoint POST /api/v1/query + /health + /feedback
-- [ ] Ingest corpus P1
-- [ ] Chat UI (web frontend — Next.js)
-- [ ] **MVP Smoke Test** ← Go/No-Go checkpoint
+**Tuần 2 — MVP Complete / Production baseline**
+- [x] Planner node (sub-query decomposition)
+- [x] Clarifier node (clarification request)
+- [x] `as_of_date` temporal filter logic
+- [x] LangGraph graph assembly
+- [x] FastAPI endpoint POST /api/v1/query + /health + /feedback
+- [ ] Promote corpus P1/P0 rebuild chính thức — production vẫn đang báo 81 legacy chunks
+- [x] Chat UI (web frontend — Next.js) deployed trên Vercel
+- [ ] **MVP Smoke Test** đầy đủ 20 kịch bản — mới có availability smoke test
+
+**Đánh giá M2:** Đã đạt deployment/demo baseline, chưa đạt validated MVP acceptance.
+Xem [PROJECT_STATUS.md](PROJECT_STATUS.md) để biết bằng chứng và các điều kiện còn thiếu.
 
 **Tuần 3 — Evaluation & Polish**
 - [ ] RAGAS evaluation pipeline
@@ -710,4 +713,4 @@ in/log/commit giá trị API key. Khi deploy, nhập secrets trực tiếp trên
 - Qdrant Documentation — https://qdrant.tech/documentation/
 
 ---
-*Phiên bản: v1.1.0 | Cập nhật lần cuối: 2026-10-04*
+*Phiên bản: v1.2.0 | Cập nhật lần cuối: 2026-10-09*
