@@ -202,7 +202,7 @@ async def health_check() -> HealthResponse:
         retriever = get_retriever()
         client = retriever.get_client()
         if client:
-            count_res = client.count(collection_name=retriever.settings.QDRANT_COLLECTION)
+            count_res = client.count(collection_name=retriever.settings.QDRANT_ACTIVE_ALIAS)
             corpus_size = count_res.count
             qdrant_status = "connected"
     except Exception as e:

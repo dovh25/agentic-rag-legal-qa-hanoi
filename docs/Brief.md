@@ -1,4 +1,10 @@
 # Project Brief
+
+> **Implementation baseline (2026-10-09):** The deployed target architecture is Next.js/Vercel
+> → FastAPI Docker/Render → Qdrant Cloud → Mistral API. The active corpus is selected through
+> alias `legal_chunks` and currently resolves to `legal_chunks_20261009_2` with 1,956 points.
+> BAAI/bge-m3 dense retrieval is active; sparse BM25/RRF is not yet active. Chat history is
+> browser-local IndexedDB and chat responses use the stateless SSE endpoint.
 # Agentic RAG Legal QA — Hà Nội
 
 > **Loại tài liệu**: Project Brief (Tóm tắt dự án chiến lược)
@@ -40,7 +46,7 @@ flowchart LR
     Q["Câu hỏi\ntiếng Việt"] --> A["LangGraph\nAgent"]
     A --> R["Phân tích\n& Route"]
     R --> S["Truy xuất\nQdrant"]
-    S --> G["Tổng hợp\nGemini-3.8-flash"]
+    S --> G["Tổng hợp\nMistral mistral-small-latest"]
     G --> ANS["Câu trả lời\n+ Trích dẫn\n+ URL nguồn"]
 ```
 
@@ -93,7 +99,7 @@ flowchart LR
 | Layer | Công nghệ |
 |---|---|
 | **Agent Orchestration** | LangGraph 0.2+ |
-| **LLM** | Google Gemini (gemini-3.8-flash qua OpenAI-compatible endpoint) |
+| **LLM** | Mistral (`mistral-small-latest` qua OpenAI-compatible endpoint) |
 | **Embedding** | BAAI/bge-m3 (1024 dims dense; sparse/BM25 chưa active trong production) |
 | **Vector Store** | Qdrant (Qdrant Cloud / Docker local / collection: legal_chunks) |
 | **Data Ingestion** | Automated Crawler & Parser (vanban.chinhphu.vn, congbao.hanoi.gov.vn) |

@@ -12,7 +12,9 @@ Vercel (Next.js) ──HTTPS──> Render Web Service (FastAPI Docker)
 ```
 
 Render là runtime stateless. Không dùng filesystem hoặc volume ephemeral của Render để
-lưu corpus/vector index; Qdrant Cloud là nguồn dữ liệu bền vững. Local Docker Compose vẫn
+lưu corpus/vector index; Qdrant Cloud là nguồn dữ liệu bền vững. Runtime phải truy vấn
+alias `legal_chunks`, không hard-code collection vật lý; alias hiện trỏ tới
+`legal_chunks_20261009_2` (1.956 points, 1024/Cosine). Docker Compose vẫn
 là fallback khi free tier ngủ hoặc hết quota.
 
 ## Secrets và biến môi trường

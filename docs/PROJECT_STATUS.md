@@ -9,9 +9,9 @@
 | Hạng mục | Trạng thái | Bằng chứng |
 |---|---|---|
 | Frontend Vercel | ✅ Hoạt động | HTTP 200 |
-| Backend Render | ✅ Hoạt động | HTTP 200 `/health` |
+| Backend Render | ⚠️ Chưa xác minh trong phiên này | `/health` timed out; cần wake/redeploy Render và chạy lại smoke test |
 | API contract | ✅ Đã deploy | `/api/v1/query`, `/api/v1/health`, `/api/v1/feedback` |
-| Qdrant Cloud | ✅ Connected | Health production báo `qdrant=connected` |
+| Qdrant Cloud | ✅ Verified trực tiếp | Alias `legal_chunks` → `legal_chunks_20261009_2`, 1.956 points, green, 1024/Cosine |
 | LLM provider | ⚠️ Chờ cấu hình secret | Mistral `mistral-small-latest`; key chỉ đặt trong Render secret |
 | Corpus production | ✅ Rebuilt/promoted | `legal_chunks` alias → `legal_chunks_20261009_2`, 1.956 chunks |
 | LangGraph flow | ✅ Đã lắp ráp | Router → planner/clarification/retrieval → grader → synthesis → verify |
@@ -56,8 +56,9 @@ Health response hiện tại:
 
 Chưa thể tuyên bố MVP hoàn thiện theo PRD vì:
 
-1. Backend Render chưa được redeploy với `CORPUS_VERSION=2026-10-09.2`; Qdrant alias đã
-   được promote độc lập và rollback snapshot 81 chunks vẫn được giữ lại.
+1. Backend Render chưa thể xác minh sau thay đổi mới; cần `/health` trả `corpus_version=2026-10-09.2`
+   và `active_collection=legal_chunks`. Qdrant alias đã được promote độc lập và rollback
+   snapshot 81 chunks vẫn được giữ lại.
 2. Sparse/BM25/RRF chưa được triển khai đầy đủ; retrieval production hiện chủ yếu dense
    vector và payload filtering.
 4. Chưa có bằng chứng cho Faithfulness ≥ 0.90, Citation Accuracy ≥ 95%, P95 ≤ 8 giây,

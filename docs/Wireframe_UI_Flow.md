@@ -253,7 +253,7 @@ graph TB
             C2S["Score: ███████░░ 0.88"]
             C2L["[ Xem toàn văn → ]"]
         end
-        STATUS["✅ Đã trả lời | 3.2s | gemini-3.8-flash"]
+        STATUS["✅ Đã trả lời | 3.2s | mistral-small-latest"]
         FEEDBACK["👍 Hữu ích? [ 👍 ] [ 👎 ]"]
         RELATED["Câu hỏi liên quan:\n• Hỗ trợ tái định cư tại Đông Anh?\n• Thủ tục khiếu nại về bồi thường?"]
         REASONING["▼ 💭 Reasoning (thu gọn được)\n1. Phân loại: single_hop\n2. Retrieve: 5 chunks từ Qdrant\n3. Grade: 4/5 pass threshold\n4. Generate: tổng hợp 4 chunks"]

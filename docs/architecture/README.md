@@ -1,7 +1,7 @@
 # Architecture Documentation — Agentic RAG Legal QA Hà Nội
 
 > Tài liệu đặc tả kiến trúc kỹ thuật hệ thống Hỏi đáp Pháp luật Đất đai & Quy hoạch TP. Hà Nội.  
-> Công nghệ cốt lõi: **LangGraph** · **Google Gemini API (gemini-3.8-flash)** · **Qdrant Vector DB** · **BAAI/bge-m3** · **FastAPI**
+> Công nghệ cốt lõi: **LangGraph** · **Mistral API (`mistral-small-latest`)** · **Qdrant Vector DB** · **BAAI/bge-m3** · **FastAPI**
 
 > **MVP deployment:** Vercel (Next.js) → Render (FastAPI Docker) → Qdrant Cloud Free.
 > Xem [cloud runbook](../deployment/MVP_CLOUD.md) để biết bootstrap, secrets và rollback.
@@ -46,7 +46,7 @@ graph TB
 
     subgraph INFRASTRUCTURE["HẠ TẦNG LƯU TRỮ & MÔ HÌNH (STORAGE & MODELS)"]
         QDRANT[("Qdrant Cloud / Docker\nCollection: legal_chunks\n1024-dim Cosine + Payload Indexes")]
-        GEMINI["Google Gemini API\n(gemini-3.8-flash qua OpenAI Protocol)"]
+        MISTRAL["Mistral API\n(mistral-small-latest qua OpenAI Protocol)"]
         BGEM3["BAAI/bge-m3\n(Dense 1024-dim; sparse index not active)"]
     end
 
@@ -97,7 +97,7 @@ stateDiagram-v2
    - Rà soát độ liên quan ngữ nghĩa và trường từ vựng pháp lý của các đoạn trích.
    - Kích hoạt quy tắc **Chặn phỏng đoán**: Nếu câu hỏi nằm ngoài phạm vi pháp luật đất đai hoặc không có văn bản liên quan, lập tức trả về `status: "insufficient_evidence"`.
 5. **`synthesize_node`**:
-   - Gửi prompt có định dạng cấu trúc sang mô hình Google Gemini (`gemini-3.8-flash` qua OpenAI protocol) để tổng hợp câu trả lời khách quan, chuẩn xác.
+   - Gửi prompt có định dạng cấu trúc sang Mistral (`mistral-small-latest` qua OpenAI protocol) để tổng hợp câu trả lời dựa trên evidence.
    - Tích hợp bộ đệm deterministic fallback khi gặp giới hạn hạn mức (Rate limit/Quota 429) của gói Free Tier.
 6. **`verify_node`**:
    - Kiểm tra chéo từng trích dẫn (`citations`) với cơ sở dữ liệu `manifest.json` và nguồn gốc văn bản ban hành.

@@ -8,7 +8,7 @@
 [![Tests](https://img.shields.io/badge/Tests-Pytest%20Passing-brightgreen.svg)](tests/)
 
 > **Hệ thống hỏi đáp thông minh văn bản quy phạm pháp luật về đất đai, quy hoạch, thu hồi đất, bồi thường và tái định cư tại Thành phố Hà Nội**  
-> *Được xây dựng trên kiến trúc **Agentic RAG** (LangGraph + FastAPI + Qdrant Vector Store + BGE-M3 Dense Embedding + payload filtering; sparse/BM25 đang hoàn thiện)*
+> *Được xây dựng trên kiến trúc **Agentic RAG** (LangGraph + FastAPI + Qdrant Vector Store + BGE-M3 Dense Embedding + payload filtering; sparse/BM25 chưa bật trong production).*
 
 > **Production demo:** [Web Vercel](https://agentic-rag-legal-qa-hanoi.vercel.app) ·
 > [API Render](https://agentic-rag-legal-qa-api.onrender.com) ·
@@ -84,7 +84,7 @@ flowchart TD
         
         ROUTER -- "Vague / Thiếu dữ kiện" --> CLARIFY["Clarifier Node"] --> RESP_CLARIFY(["status: clarification_needed"])
         ROUTER -- "Multi-aspect / Phức tạp" --> PLANNER["Planner Node\n(Sub-query Decomposition)"]
-        ROUTER -- "Cụ thể / Trực tiếp" --> RETRIEVER["Retriever Node\n- Dense Semantic (BGE-M3)\n- Payload Filter (Hà Nội & Active)\n- Sparse/BM25: planned"]
+        ROUTER -- "Cụ thể / Trực tiếp" --> RETRIEVER["Retriever Node\n- Dense Semantic (BGE-M3)\n- Payload Filter (Hà Nội & Active)\n- Alias legal_chunks"]
         
         PLANNER --> RETRIEVER
         QDRANT -.-> RETRIEVER
