@@ -1,15 +1,18 @@
 import asyncio
+import json
 import time
 from collections import defaultdict
 from datetime import date
 from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi.responses import StreamingResponse
 
 from src.api.deps import get_agent_graph
 from src.core.config import get_settings
 from src.core.logging import logger
 from src.models.schemas import (
+    ChatRequest,
     FeedbackRequest,
     HealthResponse,
     LegalCitation,
@@ -20,6 +23,52 @@ from src.models.schemas import (
 
 router = APIRouter(tags=["Legal QA"])
 _request_timestamps: dict[str, list[float]] = defaultdict(list)
+
+
+def _contextual_query(request: ChatRequest) -> str:
+    """Render bounded browser context without treating it as legal evidence."""
+    if not request.context:
+        return request.message
+    history = "\n".join(f"{item.role}: {item.content}" for item in request.context[-12:])
+    return (
+        "Use the following prior conversation only to resolve references in the user's "
+        "latest question. It is not legal evidence and must not be cited.\n"
+        f"{history}\nuser: {request.message}"
+    )
+
+
+async def _execute_chat(request: ChatRequest, agent_graph: Any) -> LegalQAResponse:
+    start_time = time.time()
+    effective_date = request.as_of_date or str(date.today())
+    initial_state = {
+        "query": _contextual_query(request),
+        "as_of_date": effective_date,
+        "district": request.district,
+        "conversation_context": [item.model_dump() for item in request.context],
+        "reasoning_steps": [],
+    }
+    final_state = await asyncio.to_thread(agent_graph.invoke, initial_state)
+    citations = []
+    for citation in final_state.get("citations", []):
+        try:
+            citations.append(LegalCitation(**citation))
+        except Exception as parse_err:
+            logger.warning("Error parsing citation: %s", parse_err)
+    return LegalQAResponse(
+        query=request.message,
+        status=ResponseStatus(final_state.get("status", ResponseStatus.ANSWERED)),
+        answer=final_state.get("answer"),
+        citations=citations,
+        reasoning_steps=final_state.get("reasoning_steps", [])
+        if request.include_reasoning_steps
+        else [],
+        route=final_state.get("route"),
+        sub_queries=final_state.get("sub_queries", []),
+        clarification_question=final_state.get("clarification_question"),
+        processing_time_ms=round((time.time() - start_time) * 1000, 2),
+        as_of_date_applied=effective_date,
+        metadata={"district": request.district, "stateless_context": True},
+    )
 
 
 def _check_access(api_key: str | None, client_key: str | None) -> None:
@@ -104,6 +153,37 @@ async def ask_legal_question(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Internal agent error: {str(e)}",
         ) from e
+
+
+@router.post(
+    "/chat/stream",
+    summary="Stream a stateless browser-owned chat response",
+    response_class=StreamingResponse,
+)
+async def stream_chat(
+    request: ChatRequest,
+    agent_graph=Depends(get_agent_graph),
+    api_key: str | None = Header(default=None, alias="X-API-Key"),
+    client_key: str | None = Header(default=None, alias="X-Client-Key"),
+) -> StreamingResponse:
+    _check_access(api_key, client_key)
+
+    async def events():
+        try:
+            yield f"data: {json.dumps({'type': 'message_started'}, ensure_ascii=False)}\n\n"
+            result = await _execute_chat(request, agent_graph)
+            if result.answer:
+                yield f"data: {json.dumps({'type': 'text_delta', 'text': result.answer, 'grounded': True}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'message_completed', 'response': result.model_dump(mode='json')}, ensure_ascii=False)}\n\n"
+        except Exception as error:
+            logger.exception("Chat stream failed")
+            yield f"data: {json.dumps({'type': 'error', 'message': str(error)}, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        events(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.get(

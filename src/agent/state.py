@@ -20,3 +20,4 @@ class AgentState(TypedDict, total=False):
     reasoning_steps: list[str]
     processing_time_ms: float | None
     error: str | None
+    conversation_context: list[dict[str, Any]]

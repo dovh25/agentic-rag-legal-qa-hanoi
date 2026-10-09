@@ -1,7 +1,25 @@
 import pytest
 from pydantic import ValidationError
 
-from src.models.schemas import LegalCitation, LegalQARequest, LegalQAResponse, ResponseStatus
+from src.models.schemas import (
+    ChatRequest,
+    LegalCitation,
+    LegalQARequest,
+    LegalQAResponse,
+    ResponseStatus,
+)
+
+
+def test_chat_request_accepts_bounded_browser_context():
+    request = ChatRequest(
+        message="Theo quy định trên thì khoản hỗ trợ nào áp dụng?",
+        context=[
+            {"id": "u1", "role": "user", "content": "Đất bị thu hồi ở Đông Anh."},
+            {"id": "a1", "role": "assistant", "content": "Cần xác định nguồn gốc sử dụng đất."},
+        ],
+    )
+    assert len(request.context) == 2
+    assert request.context[0].role == "user"
 
 
 def test_legal_qa_request_valid():

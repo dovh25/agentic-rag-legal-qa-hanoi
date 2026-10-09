@@ -1,6 +1,6 @@
 from datetime import date
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -103,6 +103,39 @@ class LegalQAResponse(BaseModel):
     processing_time_ms: float | None = Field(None, description="Execution latency in milliseconds")
     as_of_date_applied: str | None = Field(None, description="Effective date applied for filtering")
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class ChatMessage(BaseModel):
+    """A browser-owned conversation message sent as bounded context."""
+
+    id: str = Field(..., min_length=1, max_length=100)
+    role: Literal["user", "assistant"] = "user"
+    content: str = Field(..., min_length=1, max_length=20_000)
+    citations: list[LegalCitation] = Field(default_factory=list)
+
+
+class ChatRequest(BaseModel):
+    """Stateless chat request; conversation history remains in the browser."""
+
+    message: str = Field(..., min_length=3, max_length=20_000)
+    context: list[ChatMessage] = Field(default_factory=list, max_length=12)
+    as_of_date: str | None = None
+    district: str | None = Field(None, max_length=120)
+    max_results: int = Field(default=5, ge=1, le=20)
+    include_reasoning_steps: bool = True
+
+    @field_validator("as_of_date")
+    @classmethod
+    def validate_chat_date(cls, value: str | None) -> str | None:
+        if value is not None:
+            date.fromisoformat(value)
+        return value
+
+    @model_validator(mode="after")
+    def validate_context_size(self) -> "ChatRequest":
+        if sum(len(item.content) for item in self.context) > 40_000:
+            raise ValueError("conversation context exceeds 40000 characters")
+        return self
 
 
 class FeedbackRequest(BaseModel):

@@ -54,3 +54,13 @@ def test_feedback_endpoint():
     response = client.post("/api/v1/feedback", json=payload)
     assert response.status_code == 200
     assert response.json()["status"] == "success"
+
+
+def test_chat_stream_endpoint_emits_completion():
+    response = client.post(
+        "/api/v1/chat/stream",
+        json={"message": "đất nông nghiệp"},
+    )
+    assert response.status_code == 200
+    assert "message_started" in response.text
+    assert "message_completed" in response.text

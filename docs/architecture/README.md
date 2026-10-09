@@ -154,3 +154,9 @@ và 81 chunks trong lần dry-run local gần nhất; đây chưa phải là xá
 3. **Nghị định số 102/2024/NĐ-CP** (Quy định chi tiết thi hành một số điều của Luật Đất đai).
 4. **Quyết định số 61/2024/QĐ-UBND TP. Hà Nội** (Quy định cụ thể bồi thường, hỗ trợ, tái định cư trên địa bàn TP. Hà Nội).
 5. **Nghị quyết số 52/2025/NQ-HĐND TP. Hà Nội** (Ban hành Bảng giá đất áp dụng trên địa bàn TP. Hà Nội).
+## Chat runtime boundary
+
+The ChatGPT-style UI stores conversations in browser IndexedDB. Each request sends only a
+bounded context to the stateless FastAPI service. The graph may use that context to resolve
+follow-up references, but Qdrant retrieval and citation verification remain the sole legal
+evidence path. The chat route emits SSE events and never creates a server-side session.

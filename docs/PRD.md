@@ -714,3 +714,12 @@ in/log/commit giá trị API key. Khi deploy, nhập secrets trực tiếp trên
 
 ---
 *Phiên bản: v1.2.0 | Cập nhật lần cuối: 2026-10-09*
+# Chatbot redesign addendum
+
+The next product surface is a ChatGPT-style legal chatbot rather than a single-query form.
+Conversation history is stored only in browser IndexedDB; the backend is stateless and
+receives bounded context with the current message. `POST /api/v1/chat/stream` exposes SSE
+events while `/api/v1/query` remains backward compatible. The UI must provide new chat,
+local session list, sample questions, follow-up turns, verified citation cards, clarification
+and insufficient-evidence states. Server-side conversation persistence, authentication,
+cross-device sync and document upload are explicitly out of scope for this phase.

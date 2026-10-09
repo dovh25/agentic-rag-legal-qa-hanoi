@@ -84,3 +84,10 @@ Chưa thể tuyên bố MVP hoàn thiện theo PRD vì:
 
 Tuần 3 vì vậy được mở theo chế độ **evaluation gate**, không được coi là đã pass chỉ vì
 hai dịch vụ cloud đang trả HTTP 200.
+## Chatbot redesign status
+
+The browser chatbot shell and stateless SSE contract are implemented in the working tree:
+IndexedDB local sessions, transcript/composer, sample prompts and citation cards are present.
+The backend contract enforces bounded context and the existing query endpoint remains
+compatible. Production redeployment and end-to-end browser smoke testing are still required
+before calling the redesign production-ready.
