@@ -342,3 +342,10 @@ nằm tại [web/](web/) và dùng `NEXT_PUBLIC_API_BASE_URL`.
 ---
 
 *Tài liệu kỹ thuật được duy trì bởi nhóm dự án. Chi tiết tham khảo: [PRD.md](docs/PRD.md) · [Brief.md](docs/Brief.md) · [Wireframe_UI_Flow.md](docs/Wireframe_UI_Flow.md).*
+## Chatbot redesign
+
+The web application now targets a ChatGPT-style multi-turn experience. Sessions and
+citations are persisted locally in browser IndexedDB only; the stateless backend accepts
+bounded context through `POST /api/v1/chat/stream` (SSE). The legacy `/api/v1/query`
+contract remains available. See [ADR-0005](docs/adr/0005-browser-owned-chat-history.md)
+for the privacy and trust-boundary decision.

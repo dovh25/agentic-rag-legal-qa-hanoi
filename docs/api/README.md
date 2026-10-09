@@ -166,6 +166,28 @@ với 1.956 chunk P0 đã validation; collection rollback `legal_chunks_legacy_2
 giữ lại 81 chunk cũ. Health của backend chỉ phản ánh `CORPUS_VERSION` sau khi Render
 được redeploy.
 
+## Chat API (browser-owned history)
+
+`POST /api/v1/chat/stream` is a stateless SSE endpoint. The browser sends the current
+message and at most 12 prior messages (maximum 40,000 context characters). The server does
+not persist a conversation or trust client citations as evidence.
+
+```json
+{
+  "message": "Theo quy định trên thì khoản hỗ trợ nào áp dụng?",
+  "context": [
+    {"id": "u1", "role": "user", "content": "Đất bị thu hồi ở Đông Anh.", "citations": []}
+  ],
+  "district": "Đông Anh",
+  "as_of_date": "2025-01-01"
+}
+```
+
+SSE events are `message_started`, `text_delta`, `message_completed`, or `error`. The
+completed event contains the same grounded status/citations contract as `/query`. A
+`text_delta` is marked `grounded: true`; clients must wait for `message_completed` before
+persisting the assistant message. `/api/v1/query` remains available for non-chat clients.
+
 ---
 
 ### 2.3 `POST /api/v1/feedback` (Gửi Đánh giá Người dùng)

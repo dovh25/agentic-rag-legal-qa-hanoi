@@ -543,3 +543,19 @@ stateDiagram-v2
 ---
 
 *Wireframe & UI Flow v1.1 — Xem PRD.md và Brief.md để biết context đầy đủ.*
+# Chatbot redesign overlay
+
+## ChatGPT-style conversation flow
+
+1. Empty state shows the legal QA value proposition and sample questions for compensation,
+   recovery, planning, land pricing and resettlement.
+2. The left sidebar creates, selects, renames/deletes and locally persists sessions.
+3. The transcript renders user and assistant turns; assistant turns display verified source
+   cards with document number, article/clause, quote and official URL.
+4. The composer supports Enter to send, Shift+Enter for a newline, disabled/loading state,
+   retry/error state and follow-up context.
+5. Clarification and `insufficient_evidence` are rendered as distinct non-answer states.
+6. On mobile the sidebar collapses and the composer remains fixed and accessible.
+
+History is browser-only through IndexedDB. The server receives bounded context through the
+chat API and never becomes the source of truth for session history.

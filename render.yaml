@@ -25,3 +25,9 @@ services:
         sync: false
       - key: QDRANT_COLLECTION
         value: legal_chunks
+      - key: QDRANT_ACTIVE_ALIAS
+        value: legal_chunks
+      - key: CORPUS_VERSION
+        value: 2026-10-09.2
+      - key: EMBEDDING_REVISION
+        value: bge-m3-1024-v1

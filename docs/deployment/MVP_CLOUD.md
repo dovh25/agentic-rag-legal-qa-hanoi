@@ -61,6 +61,13 @@ Production demo hiện tại:
   `corpus_size=1956` after the 2026-10-09.2 collection promotion.
 - Backend must be redeployed with `CORPUS_VERSION=2026-10-09.2`; the Qdrant alias is already
   promoted and the 81-point legacy collection is retained for rollback.
+
+  ### Chat streaming
+
+  The Render service must pass through `text/event-stream` without response buffering. Keep
+  `X-Accel-Buffering: no`, disable CDN caching for `/api/v1/chat/stream`, and configure proxy
+  timeouts longer than the maximum agent request. The frontend falls back to an explicit
+  error state rather than silently storing an incomplete assistant message.
   đã được promote. Xem [project status](../PROJECT_STATUS.md).
 
 Các collection version cũ phải được giữ lại để rollback. Rollback là thao tác promote alias

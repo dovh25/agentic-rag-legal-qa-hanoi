@@ -216,3 +216,10 @@ rollback được ghi tại [docs/deployment/MVP_CLOUD.md](deployment/MVP_CLOUD.
 [docs/PROJECT_STATUS.md](PROJECT_STATUS.md).
 
 * Brief v1.1 — Xem PRD.md để biết chi tiết đầy đủ.*
+# Chatbot UX direction
+
+The MVP UI is being redesigned as a multi-turn chatbot. Users can create and revisit local
+browser sessions, ask follow-up questions with bounded context, choose sample prompts and
+inspect official citations inline. IndexedDB is the only history store; no conversation
+content is retained by the API. Streaming is delivered through the stateless SSE chat
+endpoint, with an explicit fallback/error state when a provider or proxy cannot stream.
