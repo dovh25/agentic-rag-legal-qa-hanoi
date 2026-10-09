@@ -12,11 +12,11 @@
 | Backend Render | ⚠️ Partial smoke only | `/health` HTTP 200, nhưng query và SSE smoke bị timeout; production chưa chạy commit hiện tại đầy đủ |
 | API contract | ✅ Đã deploy | `/api/v1/query`, `/api/v1/health`, `/api/v1/feedback` |
 | Qdrant Cloud | ✅ Verified trực tiếp | Alias `legal_chunks` → `legal_chunks_20261009_2`, 1.956 points, green, 1024/Cosine |
-| LLM provider | ⚠️ Chờ cấu hình secret | Mistral `mistral-small-latest`; key chỉ đặt trong Render secret |
+| LLM provider | ⚠️ Chờ cấu hình secret | Groq `llama-3.3-70b-versatile`; key phải đặt trong Render secret |
 | Corpus production | ✅ Rebuilt/promoted | `legal_chunks` alias → `legal_chunks_20261009_2`, 1.956 chunks |
 | LangGraph flow | ✅ Đã lắp ráp | Router → planner/clarification/retrieval → grader → synthesis → verify |
 | OCR/canonical rebuild | ✅ Đã promote | 5 P0 snapshots chính thức, validation 0 lỗi |
-| RAGAS benchmark | ❌ Chưa chạy | Chưa có report đạt ngưỡng |
+| RAGAS benchmark | ⚠️ Scaffold sẵn, chưa đo | Cần Groq judge/provider secret và chạy evaluation dataset |
 | Golden set 50 câu | ❌ Chưa hoàn tất | Chưa có bộ đánh giá chuẩn hóa |
 | Load test P95 | ❌ Chưa đo | Chưa có k6 report |
 | Prompt-injection audit | ❌ Chưa hoàn tất | Chưa có security report |
@@ -40,7 +40,7 @@ Health response production trong lần kiểm tra gần nhất:
 
 Đây là health contract của deployment hiện tại, chưa chứng minh được alias/corpus/LLM
 metadata của commit mới. Production smoke script đạt health và clarification nhưng query
-đầy đủ và SSE bị `ReadTimeout`; cần redeploy/wake Render và kiểm tra provider secret trước
+đầy đủ và SSE bị `ReadTimeout`; cần redeploy/wake Render, đặt Groq secret và kiểm tra provider secret trước
 khi đo latency hoặc tuyên bố Go.
 
 ## Kết luận MVP

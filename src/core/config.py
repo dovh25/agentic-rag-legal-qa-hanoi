@@ -17,9 +17,9 @@ class Settings(BaseSettings):
 
     # LLM Settings
     OPENAI_API_KEY: str | None = None
-    OPENAI_BASE_URL: str = "https://api.mistral.ai/v1"
-    MODEL_NAME: str = "mistral-small-latest"
-    LLM_PROVIDER: str = "mistral"
+    OPENAI_BASE_URL: str = "https://api.groq.com/openai/v1"
+    MODEL_NAME: str = "llama-3.3-70b-versatile"
+    LLM_PROVIDER: str = "groq"
     EMBEDDING_MODEL: str = "BAAI/bge-m3"
 
     # Vector Database (Qdrant)

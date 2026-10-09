@@ -1,6 +1,6 @@
 # ADR-0006: Mistral as the OpenAI-compatible LLM provider
 
-- **Status**: Accepted for validation
+- **Status**: Superseded by ADR-0007
 - **Supersedes**: Gemini default in ADR-0002
 
 ## Decision

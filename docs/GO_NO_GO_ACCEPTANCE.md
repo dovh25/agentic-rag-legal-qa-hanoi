@@ -43,7 +43,7 @@ prompt-injection data exfiltration, data loss, or an unresponsive production ser
 ## Required run sequence
 
 1. Run local tests, Ruff, frontend build, API/SSE contract checks and manifest validation.
-2. Inject the Mistral key only through secret management; verify provider/model/quota without
+2. Inject the Groq key only through secret management; verify provider/model/quota without
    printing the key.
 3. Redeploy Render/Vercel and check `/api/v1/health`, `/api/v1/query` and
    `/api/v1/chat/stream`.
@@ -59,6 +59,9 @@ The repository now provides reproducible starting points for the evidence run:
   RAGAS dataset are configured; it never fabricates scores.
 - `python scripts/production_smoke.py` checks health, query, clarification and SSE
   completion without storing response secrets.
+- Render provider configuration: set the rotated `OPENAI_API_KEY` secret, then
+  `OPENAI_BASE_URL=https://api.groq.com/openai/v1`, `MODEL_NAME=llama-3.3-70b-versatile`
+  and `LLM_PROVIDER=groq` before redeploying.
 - `eval/load/k6_chat.js` defines single-hop and multi-hop production load scenarios.
 - `eval/security/prompt_injection_cases.json` is the seed matrix for the security review.
 
