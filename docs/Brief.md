@@ -2,7 +2,7 @@
 # Agentic RAG Legal QA — Hà Nội
 
 > **Loại tài liệu**: Project Brief (Tóm tắt dự án chiến lược)
-> **Phiên bản**: v1.1 | **Ngày**: 2026-10-04 | **Tác giả**: Vũ Huy Đô
+> **Phiên bản**: v1.2 | **Ngày**: 2026-10-09 | **Tác giả**: Vũ Huy Đô
 
 ---
 
@@ -31,7 +31,9 @@ Hà Nội đang quy hoạch lại hàng trăm vị trí (Vành đai 4, đường
 
 ## Giải pháp (Solution)
 
-**Agentic RAG** — câu hỏi tiếng Việt tự nhiên → LangGraph Agent phân tích, truy xuất, tổng hợp → câu trả lời + trích dẫn điều khoản + URL nguồn.
+**Agentic RAG** — câu hỏi tiếng Việt tự nhiên → LangGraph Agent phân tích, truy xuất dense,
+lọc metadata, tổng hợp → câu trả lời + trích dẫn điều khoản + URL nguồn. Sparse/BM25 là
+hạng mục mở rộng, chưa active trong production.
 
 ```mermaid
 flowchart LR
@@ -92,7 +94,7 @@ flowchart LR
 |---|---|
 | **Agent Orchestration** | LangGraph 0.2+ |
 | **LLM** | Google Gemini (gemini-3.8-flash qua OpenAI-compatible endpoint) |
-| **Embedding** | BAAI/bge-m3 (1024 dims dense + BM25 sparse weights) |
+| **Embedding** | BAAI/bge-m3 (1024 dims dense; sparse/BM25 chưa active trong production) |
 | **Vector Store** | Qdrant (Qdrant Cloud / Docker local / collection: legal_chunks) |
 | **Data Ingestion** | Automated Crawler & Parser (vanban.chinhphu.vn, congbao.hanoi.gov.vn) |
 | **API** | FastAPI + Uvicorn |
@@ -174,11 +176,11 @@ gantt
 ## Go / No-Go Criteria
 
 ### GO nếu (cuối Tuần 2):
-- [x] Faithfulness >= 0.90 trên eval set
-- [x] P95 latency <= 8s (single-hop)
-- [x] 0 critical security vulnerabilities
-- [x] Corpus P0 đầy đủ và index thành công
-- [x] Demo UI hoạt động ổn định
+- [ ] Faithfulness >= 0.90 trên eval set — chưa có report
+- [ ] P95 latency <= 8s (single-hop) — chưa đo
+- [ ] 0 critical security vulnerabilities — chưa audit
+- [ ] Corpus P0 đầy đủ và index thành công — production vẫn 81 legacy chunks
+- [x] Demo UI hoạt động ổn định ở mức availability smoke test
 
 ### NO-GO nếu:
 - [ ] Hallucination rate > 5% trong manual audit
@@ -203,7 +205,14 @@ MVP cần có deployment công khai, ưu tiên free tier: **Next.js trên Vercel
 container trên Render**, **Qdrant Cloud Free** và Gemini/provider tương thích. Render là
 runtime stateless; vector index không lưu trên filesystem ephemeral. Secrets chỉ cấu hình
 trực tiếp ở provider, còn local development có thể đọc từ `.env` nhưng không được commit
-hoặc log giá trị. Runbook triển khai, bootstrap P0, health check, quota/cold-start và
+hoặc log giá trị. Production hiện tại là:
+
+- API: https://agentic-rag-legal-qa-api.onrender.com
+- Web: https://agentic-rag-legal-qa-hanoi.vercel.app
+
+Runbook triển khai, bootstrap P0, health check, quota/cold-start và
 rollback được ghi tại [docs/deployment/MVP_CLOUD.md](deployment/MVP_CLOUD.md).
+Đánh giá đầy đủ và các điều kiện còn thiếu xem
+[docs/PROJECT_STATUS.md](PROJECT_STATUS.md).
 
 * Brief v1.1 — Xem PRD.md để biết chi tiết đầy đủ.*

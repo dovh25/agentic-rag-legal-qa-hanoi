@@ -113,26 +113,53 @@ class QdrantLegalIndexer:
     def promote_alias(self, collection_name: str, alias_name: str) -> None:
         """Atomically point an alias at a validated collection."""
         client = self.connect()
-        aliases = client.get_collection_aliases().aliases
-        actions: list[qmodels.CreateAlias] = []
+        aliases = []
+        for collection in client.get_collections().collections:
+            aliases.extend(client.get_collection_aliases(collection.name).aliases)
+        actions: list[qmodels.CreateAliasOperation | qmodels.DeleteAliasOperation] = []
         for alias in aliases:
             if alias.alias_name == alias_name:
-                actions.append(qmodels.DeleteAlias(alias_name=alias_name))
-        actions.append(qmodels.CreateAlias(collection_name=collection_name, alias_name=alias_name))
+                actions.append(
+                    qmodels.DeleteAliasOperation(
+                        delete_alias=qmodels.DeleteAlias(alias_name=alias_name)
+                    )
+                )
+        actions.append(
+            qmodels.CreateAliasOperation(
+                create_alias=qmodels.CreateAlias(
+                    collection_name=collection_name, alias_name=alias_name
+                )
+            )
+        )
         client.update_collection_aliases(change_aliases_operations=actions)
 
     def generate_embeddings(self, texts: list[str]) -> list[list[float]]:
-        """Generate dense embeddings using BGE-M3 or fallback to normalized mock vectors."""
+        """Generate dense BGE-M3 embeddings, failing closed outside explicit test mode."""
         # Try importing sentence_transformers for local BGE-M3 (ADR-0001)
         try:
+            import torch
             from sentence_transformers import SentenceTransformer
 
             model = SentenceTransformer("BAAI/bge-m3")
-            vectors = model.encode(texts, normalize_embeddings=True)
+            torch.set_num_threads(min(32, torch.get_num_threads()))
+            model.max_seq_length = 64
+            vectors = model.encode(
+                texts,
+                batch_size=128,
+                normalize_embeddings=True,
+                show_progress_bar=True,
+            )
             return [v.tolist() for v in vectors]
         except Exception as e:
-            logger.debug(
-                f"sentence_transformers/BGE-M3 not loaded directly ({e}). Using deterministic embedding generator."
+            settings = get_settings()
+            if not settings.ALLOW_MOCK_EMBEDDINGS:
+                raise RuntimeError(
+                    "BGE-M3 is unavailable; refusing to generate production embeddings. "
+                    "Install sentence-transformers and the BAAI/bge-m3 model, or set "
+                    "ALLOW_MOCK_EMBEDDINGS=true only for isolated tests."
+                ) from e
+            logger.warning(
+                "Using deterministic mock embeddings because test mode is enabled: %s", e
             )
             import hashlib
             import math

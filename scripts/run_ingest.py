@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import json
 import sys
 from pathlib import Path
 
@@ -55,7 +56,15 @@ async def build_corpus(args: argparse.Namespace) -> int:
         registry.extend(P1_CORPUS_REGISTRY)
 
     crawler = LegalCrawler()
-    manifest = await crawler.crawl_corpus(registry)
+    if args.use_existing_manifest:
+        manifest = json.loads(crawler.manifest_path.read_text(encoding="utf-8"))
+        expected_ids = {source.doc_id for source in registry}
+        manifest = [item for item in manifest if item["doc_id"] in expected_ids]
+        if {item["doc_id"] for item in manifest} != expected_ids:
+            logger.error("Existing manifest does not contain the requested registry.")
+            return 2
+    else:
+        manifest = await crawler.crawl_corpus(registry)
     blocked = [
         item
         for item in manifest
@@ -164,6 +173,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--target-collection", default="legal_chunks_v2")
     parser.add_argument("--alias", default="legal_chunks")
     parser.add_argument("--report", default="data/corpus/validation-report.json")
+    parser.add_argument(
+        "--use-existing-manifest",
+        action="store_true",
+        help="Use the current manifest and snapshots without refetching official sources.",
+    )
     return parser.parse_args()
 
 

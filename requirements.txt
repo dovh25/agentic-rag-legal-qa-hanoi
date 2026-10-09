@@ -12,6 +12,7 @@ langchain-openai>=0.1.0
 
 # Vector DB & Storage
 qdrant-client>=1.9.0
+sentence-transformers>=6.1.0
 
 # Utilities
 python-dotenv>=1.0.1

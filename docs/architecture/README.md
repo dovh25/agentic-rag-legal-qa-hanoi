@@ -28,7 +28,7 @@ graph TB
         direction TB
         ROUTER["router_node\n(Phân loại Intent & Trích xuất Thực thể Địa bàn)"]
         PLANNER["planner_node\n(Phân rã Truy vấn Đa bước Multi-Hop)"]
-        RETRIEVER["retrieval_node\n(Hybrid Search: Dense + BM25)"]
+        RETRIEVER["retrieval_node\n(Dense + payload filtering; sparse planned)"]
         GRADER["grader_node\n(Lọc Nhiễu & Kiểm soát Zero Hallucination)"]
         SYNTHESIZER["synthesize_node\n(Tổng hợp Căn cứ Pháp lý)"]
         VERIFIER["verify_node\n(Kiểm chứng Nguồn gốc Trích dẫn)"]
@@ -47,7 +47,7 @@ graph TB
     subgraph INFRASTRUCTURE["HẠ TẦNG LƯU TRỮ & MÔ HÌNH (STORAGE & MODELS)"]
         QDRANT[("Qdrant Cloud / Docker\nCollection: legal_chunks\n1024-dim Cosine + Payload Indexes")]
         GEMINI["Google Gemini API\n(gemini-3.8-flash qua OpenAI Protocol)"]
-        BGEM3["BAAI/bge-m3\n(Dense 1024-dim + BM25 Sparse Local)"]
+        BGEM3["BAAI/bge-m3\n(Dense 1024-dim; sparse index not active)"]
     end
 
     UI & EXT_APP -->|HTTP/JSON| FA
@@ -115,7 +115,7 @@ flowchart LR
     B --> C["Raw Snapshot & Checksum\n(data/corpus/raw/ + manifest.json)"]
     C --> D["Legislative Parser\n(Chương > Mục > Điều > Khoản > Điểm)"]
     D --> E["Contextual Breadcrumb Chunker\n[Văn bản] > [Chương] > [Điều] > [Khoản]"]
-    E --> F["Vector Embedder\nBAAI/bge-m3 (1024 dims + BM25)"]
+    E --> F["Vector Embedder\nBAAI/bge-m3 (1024 dims)"]
     F --> G[("Qdrant versioned collection\nlegal_chunks_vN\n→ alias legal_chunks")]
 ```
 
@@ -132,7 +132,9 @@ flowchart LR
 ## 4. Chiến lược Tìm kiếm Lai (Hybrid Retrieval Strategy)
 
 - **Dense Semantic Retrieval**: Sử dụng mô hình `BAAI/bge-m3` sinh vector 1024 chiều, tính khoảng cách Cosine Distance. Giúp nắm bắt ý đồ người dùng dù không dùng đúng thuật ngữ luật chính xác.
-- **Sparse / Lexical Matching**: Bắt chính xác số hiệu văn bản (`31/2024/QH15`, `61/2024/QĐ-UBND`) và mã điều khoản (`Điều 94`, `Khoản 2`).
+- **Sparse / Lexical Matching**: Là mục tiêu kiến trúc; chưa được bật như một sparse vector
+  index độc lập trong production. Hiện tại số hiệu văn bản được ưu tiên qua payload filters
+  và query matching.
 - **Qdrant Payload Filtering**: Áp dụng bộ lọc ràng buộc trước (pre-filtering):
   - `effective_date <= as_of_date`: Văn bản đã có hiệu lực tại thời điểm tra cứu.
   - `expiry_date == null OR expiry_date >= as_of_date`: Văn bản chưa hết hiệu lực.

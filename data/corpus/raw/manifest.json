@@ -24,14 +24,19 @@
     "scope": "national",
     "applicable_district": null,
     "attachment_url": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/9/31-2024-qh15_1.pdf",
+    "attachment_urls": [
+      "https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/9/31-2024-qh15_1.pdf",
+      "https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/9/31-2024-qh15_2.pdf",
+      "https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/9/31-2024-qh15_3.pdf"
+    ],
     "status": "official_verified",
-    "sha256": "75df407436fb134c15bf3f8d3027c48d2f0ae8da303172efd6225f8562fbdcc6",
-    "source_fetched_at": "2026-10-09T04:25:46.770929+00:00",
+    "sha256": "4c083b17e58de561ac214521cdfb1d21938a07125f29dde968277783f0e98ea9",
+    "source_fetched_at": "2026-10-09T09:46:29.945774+00:00",
     "parser_version": "parser-v2",
     "corpus_version": "2026-10-09.1",
     "raw_html_path": "data/corpus/raw/31-2024-QH15.html",
     "clean_text_path": "data/corpus/raw/31-2024-QH15.txt",
-    "character_count": 6262
+    "character_count": 555611
   },
   {
     "doc_id": "88-2024-ND-CP",
@@ -57,14 +62,15 @@
     "scope": "national",
     "applicable_district": null,
     "attachment_url": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/7/88nd.signed.pdf",
+    "attachment_urls": [],
     "status": "official_verified",
-    "sha256": "449172509056d69e65c612de4c8d56d9f37476f9f8aec84f1f20a87578a0c0f1",
-    "source_fetched_at": "2026-10-09T04:31:37.645422+00:00",
+    "sha256": "4b15095406b59729f9927f9ffa519a7a94760ed8f48a545ed8986685fe40376f",
+    "source_fetched_at": "2026-10-09T09:53:01.713057+00:00",
     "parser_version": "parser-v2",
     "corpus_version": "2026-10-09.1",
     "raw_html_path": "data/corpus/raw/88-2024-ND-CP.html",
     "clean_text_path": "data/corpus/raw/88-2024-ND-CP.txt",
-    "character_count": 75419
+    "character_count": 77536
   },
   {
     "doc_id": "102-2024-ND-CP",
@@ -75,7 +81,7 @@
     "issued_date": "2024-07-30",
     "effective_date": "2024-08-01",
     "expiry_date": null,
-    "source_url": "https://vanban.chinhphu.vn/?classid=0&docid=210672",
+    "source_url": "https://vanban.chinhphu.vn/?pageid=27160&docid=210795",
     "administrative_area": [
       "Toàn quốc",
       "Hà Nội"
@@ -88,15 +94,16 @@
     "source_authority": "vanban.chinhphu.vn",
     "scope": "national",
     "applicable_district": null,
-    "attachment_url": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2024/7/10qd.signed.pdf",
-    "status": "official_mismatch",
-    "sha256": "26f32376b700d708e385eff239969a2451de30100e8bcf954752f0f904ecf808",
-    "source_fetched_at": "2026-10-09T04:32:11.941969+00:00",
+    "attachment_url": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2025/10/102-cp.signed.pdf",
+    "attachment_urls": [],
+    "status": "official_verified",
+    "sha256": "8832c17c6c3be98566c8512cef16b4eaba61047eae82095629335cfdea4ae92b",
+    "source_fetched_at": "2026-10-09T10:19:33.479511+00:00",
     "parser_version": "parser-v2",
     "corpus_version": "2026-10-09.1",
     "raw_html_path": "data/corpus/raw/102-2024-ND-CP.html",
     "clean_text_path": "data/corpus/raw/102-2024-ND-CP.txt",
-    "character_count": 8429
+    "character_count": 328981
   },
   {
     "doc_id": "61-2024-QD-UBND",
@@ -122,9 +129,10 @@
     "scope": "provincial",
     "applicable_district": null,
     "attachment_url": "https://storage-vnportal.vnpt.vn/gov-hni/6249/VanBanCongBao/2024/12/13/QDPQ-61-2024_signed.pdf",
+    "attachment_urls": [],
     "status": "official_verified",
     "sha256": "db7e23803bb9633589a05a5fcf590206d5d2f44ffb241b94c645af239ad80907",
-    "source_fetched_at": "2026-10-09T04:32:53.108856+00:00",
+    "source_fetched_at": "2026-10-09T10:19:44.081144+00:00",
     "parser_version": "parser-v2",
     "corpus_version": "2026-10-09.1",
     "raw_html_path": "data/corpus/raw/61-2024-QD-UBND.html",
@@ -154,13 +162,14 @@
     "scope": "provincial",
     "applicable_district": null,
     "attachment_url": "https://datafiles.hanoi.gov.vn/gov-hni/6249/VanBan/2025/12/2/NQPQ-52-2025.pdf",
+    "attachment_urls": [],
     "status": "official_verified",
-    "sha256": "fda392becdbff6e470459ae8aaca37cfe4cc4e5dc9d6db840508bacdf8e0f319",
-    "source_fetched_at": "2026-10-09T04:33:52.904226+00:00",
+    "sha256": "e25c83e0a05fed8ff85bd326d7f6896ae0df2aba9cb025e79010af75eb647d14",
+    "source_fetched_at": "2026-10-09T10:20:42.575422+00:00",
     "parser_version": "parser-v2",
     "corpus_version": "2026-10-09.1",
     "raw_html_path": "data/corpus/raw/52-2025-NQ-HDND.html",
     "clean_text_path": "data/corpus/raw/52-2025-NQ-HDND.txt",
-    "character_count": 15387
+    "character_count": 15497
   }
 ]

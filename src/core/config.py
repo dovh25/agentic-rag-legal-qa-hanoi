@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     QDRANT_API_KEY: str | None = None
     CORPUS_VERSION: str = "2026-10-09.1"
     EMBEDDING_REVISION: str = "bge-m3-1024-v1"
+    ALLOW_MOCK_EMBEDDINGS: bool = False
 
     # Database
     DATABASE_URL: str | None = None

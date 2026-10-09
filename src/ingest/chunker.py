@@ -22,6 +22,7 @@ class LegalChunker:
         """Convert a ParsedDocument into an indexed list of contextualized LegalChunks."""
         chunks: list[LegalChunk] = []
         chunk_index = 0
+        id_occurrences: dict[str, int] = {}
 
         for article in doc.articles:
             # Build article breadcrumb prefix
@@ -43,7 +44,10 @@ class LegalChunker:
             if not article.clauses:
                 # Article without clauses
                 chunk_index += 1
-                chunk_id = f"{doc.doc_id}-d{article.article_number}"
+                base_chunk_id = f"{doc.doc_id}-d{article.article_number}"
+                occurrence = id_occurrences.get(base_chunk_id, 0) + 1
+                id_occurrences[base_chunk_id] = occurrence
+                chunk_id = base_chunk_id if occurrence == 1 else f"{base_chunk_id}-v{occurrence}"
                 text_with_context = f"{base_breadcrumb}\n{article.full_text}"
 
                 metadata = {
@@ -106,7 +110,10 @@ class LegalChunker:
                 chunk_index += 1
                 clause_label = f"Khoản {clause.clause_number}"
                 full_breadcrumb = f"{base_breadcrumb} > [{clause_label}]"
-                chunk_id = f"{doc.doc_id}-d{article.article_number}-k{clause.clause_number}"
+                base_chunk_id = f"{doc.doc_id}-d{article.article_number}-k{clause.clause_number}"
+                occurrence = id_occurrences.get(base_chunk_id, 0) + 1
+                id_occurrences[base_chunk_id] = occurrence
+                chunk_id = base_chunk_id if occurrence == 1 else f"{base_chunk_id}-v{occurrence}"
 
                 text_with_context = f"{full_breadcrumb}\n{clause.text}"
 

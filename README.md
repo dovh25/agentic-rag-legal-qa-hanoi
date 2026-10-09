@@ -8,7 +8,15 @@
 [![Tests](https://img.shields.io/badge/Tests-Pytest%20Passing-brightgreen.svg)](tests/)
 
 > **Hệ thống hỏi đáp thông minh văn bản quy phạm pháp luật về đất đai, quy hoạch, thu hồi đất, bồi thường và tái định cư tại Thành phố Hà Nội**  
-> *Được xây dựng trên kiến trúc **Agentic RAG** (LangGraph + FastAPI + Qdrant Vector Store + BGE-M3 Dense Embedding + BM25 Lexical Hybrid Search)*
+> *Được xây dựng trên kiến trúc **Agentic RAG** (LangGraph + FastAPI + Qdrant Vector Store + BGE-M3 Dense Embedding + payload filtering; sparse/BM25 đang hoàn thiện)*
+
+> **Production demo:** [Web Vercel](https://agentic-rag-legal-qa-hanoi.vercel.app) ·
+> [API Render](https://agentic-rag-legal-qa-api.onrender.com) ·
+> [Project status](docs/PROJECT_STATUS.md)
+
+> Lưu ý: deployment hiện là **conditional MVP/demo baseline**. Production health đang
+> healthy với Qdrant connected và corpus mới 1.956 chunks; RAGAS, load test, security audit và
+> corpus rebuild chính thức chưa được chứng minh hoàn tất.
 
 ---
 
@@ -67,8 +75,8 @@ Hệ thống ứng dụng kiến trúc **Agentic RAG** điều phối qua **Lang
 flowchart TD
     subgraph INGESTION["Offline Ingestion Pipeline"]
         DOCS["Văn bản Quy phạm Pháp luật\n(Luật 2024, NĐ 88, 102, QĐ 61, NQ 52)"] --> PARSE["Legal Parser & Chunker\n(Phân cấp: Chương > Điều > Khoản)"]
-        PARSE --> EMBED["BGE-M3 Dense + BM25 Sparse"]
-        EMBED --> QDRANT[("Qdrant Vector DB\nCollection: legal_chunks")]
+        PARSE --> EMBED["BGE-M3 Dense 1024-dim"]
+        EMBED --> QDRANT[("Qdrant Vector DB\nCollection/alias: legal_chunks")]
     end
 
     subgraph AGENT["Online Agentic RAG (LangGraph)"]
@@ -76,7 +84,7 @@ flowchart TD
         
         ROUTER -- "Vague / Thiếu dữ kiện" --> CLARIFY["Clarifier Node"] --> RESP_CLARIFY(["status: clarification_needed"])
         ROUTER -- "Multi-aspect / Phức tạp" --> PLANNER["Planner Node\n(Sub-query Decomposition)"]
-        ROUTER -- "Cụ thể / Trực tiếp" --> RETRIEVER["Hybrid Retriever Node\n- Dense Semantic (BGE-M3)\n- Lexical BM25 Search\n- Payload Filter (Hà Nội & Active)"]
+        ROUTER -- "Cụ thể / Trực tiếp" --> RETRIEVER["Retriever Node\n- Dense Semantic (BGE-M3)\n- Payload Filter (Hà Nội & Active)\n- Sparse/BM25: planned"]
         
         PLANNER --> RETRIEVER
         QDRANT -.-> RETRIEVER
@@ -94,7 +102,8 @@ flowchart TD
 ### Các Node điều phối trong LangGraph:
 - **`router_node`**: Phân loại đường đi (`single_hop`, `multi_hop`, `clarification`), nhận diện 30 quận/huyện Hà Nội và thời điểm áp dụng `as_of_date`.
 - **`planner_node`**: Tách câu hỏi đa bước (so sánh quy định Trung ương vs Hà Nội) thành các sub-queries độc lập.
-- **`retrieval_node`**: Thực thi tìm kiếm lai (Dense 1024-dim BGE-M3 + BM25 Sparse), kết hợp RRF (Reciprocal Rank Fusion) và bộ lọc payload nghiêm ngặt.
+- **`retrieval_node`**: Thực thi dense retrieval 1024-dim BGE-M3 cùng payload filtering
+  nghiêm ngặt; sparse/BM25 và RRF vẫn là hạng mục cần hoàn thiện.
 - **`grader_node`**: Chấm điểm độ liên quan của các đoạn tài liệu truy xuất, loại bỏ dữ liệu nhiễu.
 - **`synthesize_node`**: Sinh câu trả lời bám sát bằng chứng, tạo danh sách trích dẫn chuẩn pháp lý.
 - **`verify_node`**: Hậu kiểm trích dẫn, xác nhận tính xác thực của điều khoản và URL trước khi trả về.
