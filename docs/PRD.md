@@ -1,4 +1,11 @@
 # Product Requirements Document (PRD)
+
+> **Current implementation baseline (2026-10-09):** Backend FastAPI/LangGraph uses Mistral
+> `llama-3.3-70b-versatile` through the Groq OpenAI-compatible API, BAAI/bge-m3 dense 1024-dim
+> embeddings, and Qdrant alias `legal_chunks` pointing to corpus `2026-10-09.2`
+> (`legal_chunks_20261009_2`, 1,956 points). Sparse BM25/RRF remains a planned enhancement,
+> not an active production retrieval path. The browser frontend is Next.js with IndexedDB
+> chat history and SSE streaming.
 # Agentic RAG Legal QA — Hà Nội
 
 | Thuộc tính | Giá trị |
@@ -331,7 +338,7 @@ graph TB
 
     subgraph INFRA["INFRASTRUCTURE"]
         QDRANT[("Qdrant (Cloud/Local)\nlegal_chunks")]
-        LLM["Google Gemini API\n(gemini-3.8-flash)\nBAAI/bge-m3 (1024 dims)"]
+        LLM["Groq API\n(llama-3.3-70b-versatile)\nBAAI/bge-m3 (1024 dims)"]
     end
 
     UI & API_C -->|HTTPS/JSON| FA
@@ -468,7 +475,7 @@ class DocumentMetadata(BaseModel):
   "route": "single_hop",
   "sub_queries": [],
   "processing_time_ms": 3240,
-  "model": "gemini-3.8-flash",
+  "model": "llama-3.3-70b-versatile",
   "as_of_date_applied": "2024-08-01"
 }
 ```
@@ -551,7 +558,7 @@ Một feature được coi là Done khi:
 | LLM hallucinate trích dẫn pháp lý | Cao | Nghiêm trọng | Grader node + strict system prompt + `insufficient_evidence` |
 | Văn bản pháp luật thay đổi, corpus lỗi thời | Cao | Cao | Cập nhật corpus định kỳ, metadata `expiry_date` |
 | Latency cao khi multi-hop | Trung bình | Trung bình | Cache, streaming response, giới hạn sub_queries=3 |
-| Chi phí LLM & Embedding | Thấp | Cao | Sử dụng Google Gemini (gemini-3.8-flash Free Tier) kết hợp BGE-M3 local (0 VNĐ) |
+| Chi phí LLM & Embedding | Thấp | Cao | Sử dụng Groq (`llama-3.3-70b-versatile`) kết hợp BGE-M3 local |
 | Người dùng tin tuyệt đối vào AI | Cao | Nghiêm trọng | Disclaimer rõ ràng, badge "Hỗ trợ tra cứu – Không phải tư vấn pháp lý" |
 | Corpus chứa văn bản scan OCR kém | Trung bình | Cao | OCR quality check, manual review trước ingest |
 | Qdrant downtime | Thấp | Cao | Containerized + health check + fallback message |
@@ -663,14 +670,14 @@ Xem [PROJECT_STATUS.md](PROJECT_STATUS.md) để biết bằng chứng và các 
 
 | Service | Vai trò | Fallback |
 |---|---|---|
-| Google Gemini API | LLM inference (gemini-3.8-flash qua OpenAI protocol) | Groq / Ollama |
-| BAAI/bge-m3 | Dense 1024-dim + Sparse BM25 Embedding (Local) | text-embedding-004 |
+| Groq API | LLM inference (`llama-3.3-70b-versatile` qua OpenAI protocol) | Mistral / Gemini / Ollama |
+| BAAI/bge-m3 | Dense 1024-dim Embedding (Local); sparse BM25/RRF chưa active | text-embedding-004 |
 | Qdrant Vector DB | Vector store (Qdrant Cloud / Docker: `legal_chunks`) | Local matcher |
 | Cổng VBPL / Công báo Hà Nội | Nguồn văn bản gốc cào tự động | Lưu offline snapshot |
 
 ### 14.3 Constraints
 
-- Ngân sách LLM & Embedding: 0 VNĐ (sử dụng 100% Free Tier qua Google Gemini & BAAI/bge-m3 local)
+- Ngân sách LLM & Embedding: 0 VNĐ (sử dụng Groq free tier/quota và BAAI/bge-m3 local)
 - Corpus: chỉ sử dụng văn bản từ nguồn chính thức (Cổng Chính phủ, Công báo Hà Nội)
 - **Thời hạn: 3 tuần** từ ngày khởi động đến Demo Day
 - Đội ngũ: 1 developer (sinh viên)

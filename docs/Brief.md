@@ -1,4 +1,10 @@
 # Project Brief
+
+> **Implementation baseline (2026-10-09):** The deployed target architecture is Next.js/Vercel
+> → FastAPI Docker/Render → Qdrant Cloud → Groq API. The active corpus is selected through
+> alias `legal_chunks` and currently resolves to `legal_chunks_20261009_2` with 1,956 points.
+> BAAI/bge-m3 dense retrieval is active; sparse BM25/RRF is not yet active. Chat history is
+> browser-local IndexedDB and chat responses use the stateless SSE endpoint.
 # Agentic RAG Legal QA — Hà Nội
 
 > **Loại tài liệu**: Project Brief (Tóm tắt dự án chiến lược)
@@ -40,7 +46,7 @@ flowchart LR
     Q["Câu hỏi\ntiếng Việt"] --> A["LangGraph\nAgent"]
     A --> R["Phân tích\n& Route"]
     R --> S["Truy xuất\nQdrant"]
-    S --> G["Tổng hợp\nGemini-3.8-flash"]
+    S --> G["Tổng hợp\nGroq llama-3.3-70b-versatile"]
     G --> ANS["Câu trả lời\n+ Trích dẫn\n+ URL nguồn"]
 ```
 
@@ -93,7 +99,7 @@ flowchart LR
 | Layer | Công nghệ |
 |---|---|
 | **Agent Orchestration** | LangGraph 0.2+ |
-| **LLM** | Google Gemini (gemini-3.8-flash qua OpenAI-compatible endpoint) |
+| **LLM** | Groq (`llama-3.3-70b-versatile` qua OpenAI-compatible endpoint) |
 | **Embedding** | BAAI/bge-m3 (1024 dims dense; sparse/BM25 chưa active trong production) |
 | **Vector Store** | Qdrant (Qdrant Cloud / Docker local / collection: legal_chunks) |
 | **Data Ingestion** | Automated Crawler & Parser (vanban.chinhphu.vn, congbao.hanoi.gov.vn) |
@@ -110,13 +116,13 @@ flowchart LR
 
 ### Giả định
 - Văn bản P0 sẵn có trên Cổng thông tin Chính phủ và Công báo Hà Nội, cho phép crawl và parse tự động.
-- Gemini API key (Google AI Studio Free Tier) được cung cấp và cấu hình trong `.env`.
+- Groq API key được cấu hình qua secret manager hoặc Render Environment.
 - Qdrant có thể chạy local via Docker trong môi trường phát triển
 - Người dùng có kết nối internet ổn định để sử dụng web UI
 
 ### Rủi ro cần theo dõi
 - Chất lượng OCR của văn bản PDF scan → ảnh hưởng retrieval recall
-- Thay đổi chính sách/hạn mức Google Gemini API (Free Tier rate limit, quota)
+- Thay đổi chính sách/hạn mức Groq API (rate limit, quota)
 - Văn bản pháp luật mới ban hành chưa có trong corpus → cần quy trình cập nhật
 
 ---
@@ -185,7 +191,7 @@ gantt
 ### NO-GO nếu:
 - [ ] Hallucination rate > 5% trong manual audit
 - [ ] Corpus chất lượng quá thấp (OCR error rate > 20%)
-- [ ] Google Gemini API / Qdrant không khả dụng hoặc vượt hạn mức quota
+- [ ] Groq API / Qdrant không khả dụng hoặc vượt hạn mức quota
 
 ---
 
@@ -202,7 +208,7 @@ gantt
 ## Cloud demo MVP (bổ sung Tuần 2)
 
 MVP cần có deployment công khai, ưu tiên free tier: **Next.js trên Vercel**, **FastAPI
-container trên Render**, **Qdrant Cloud Free** và Gemini/provider tương thích. Render là
+container trên Render**, **Qdrant Cloud Free** và Groq/provider tương thích. Render là
 runtime stateless; vector index không lưu trên filesystem ephemeral. Secrets chỉ cấu hình
 trực tiếp ở provider, còn local development có thể đọc từ `.env` nhưng không được commit
 hoặc log giá trị. Production hiện tại là:

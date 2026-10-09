@@ -17,10 +17,10 @@ class Settings(BaseSettings):
 
     # LLM Settings
     OPENAI_API_KEY: str | None = None
-    OPENAI_BASE_URL: str = "https://api.mistral.ai/v1"
-    MODEL_NAME: str = "mistral-small-latest"
-    LLM_PROVIDER: str = "mistral"
-    EMBEDDING_MODEL: str = "text-embedding-004"
+    OPENAI_BASE_URL: str = "https://api.groq.com/openai/v1"
+    MODEL_NAME: str = "llama-3.3-70b-versatile"
+    LLM_PROVIDER: str = "groq"
+    EMBEDDING_MODEL: str = "BAAI/bge-m3"
 
     # Vector Database (Qdrant)
     QDRANT_URL: str | None = None
@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     QDRANT_COLLECTION: str = "legal_chunks"
     QDRANT_ACTIVE_ALIAS: str = "legal_chunks"
     QDRANT_API_KEY: str | None = None
-    CORPUS_VERSION: str = "2026-10-09.1"
+    CORPUS_VERSION: str = "2026-10-09.2"
     EMBEDDING_REVISION: str = "bge-m3-1024-v1"
     ALLOW_MOCK_EMBEDDINGS: bool = False
 

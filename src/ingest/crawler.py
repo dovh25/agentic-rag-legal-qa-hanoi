@@ -321,7 +321,7 @@ class LegalCrawler:
             "sha256": sha256,
             "source_fetched_at": datetime.now(UTC).isoformat(),
             "parser_version": "parser-v2",
-            "corpus_version": "2026-10-09.1",
+            "corpus_version": "2026-10-09.2",
             "raw_html_path": str(html_file),
             "clean_text_path": str(text_file),
             "character_count": len(clean_text),

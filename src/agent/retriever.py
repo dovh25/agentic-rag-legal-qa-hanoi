@@ -72,6 +72,7 @@ class HybridRetriever:
     ) -> list[dict[str, Any]]:
         """Execute hybrid search with payload filtering."""
         client = self.get_client()
+        collection_name = self.settings.QDRANT_ACTIVE_ALIAS
 
         if client and self._is_connected:
             try:
@@ -128,7 +129,7 @@ class HybridRetriever:
                 # 3. Search in Qdrant (using modern query_points API)
                 if hasattr(client, "query_points"):
                     query_response = client.query_points(
-                        collection_name=self.settings.QDRANT_COLLECTION,
+                        collection_name=collection_name,
                         query=query_vector,
                         query_filter=search_filter,
                         limit=top_k,
@@ -136,7 +137,7 @@ class HybridRetriever:
                     search_results = query_response.points
                 else:
                     search_results = client.search(
-                        collection_name=self.settings.QDRANT_COLLECTION,
+                        collection_name=collection_name,
                         query_vector=query_vector,
                         query_filter=search_filter,
                         limit=top_k,

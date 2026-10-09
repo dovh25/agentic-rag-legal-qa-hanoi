@@ -8,7 +8,8 @@ Thư mục này ghi nhận các quyết định kiến trúc và công nghệ qu
 |---|---|---|---|
 | [**ADR-0001**](0001-embedding-model-bge-m3.md) | Lựa chọn Mô hình Embedding BAAI/bge-m3 (Dense 1024-dim + Sparse BM25) | `Accepted` | 2026-10-04 |
 | [**ADR-0002**](0002-llm-engine-google-gemini.md) | Lựa chọn LLM Engine — Google Gemini API (superseded) | `Superseded` | 2026-10-04 |
-| [**ADR-0006**](0006-llm-provider-mistral.md) | Mistral API qua OpenAI-compatible protocol | `Accepted for validation` | 2026-10-09 |
+| [**ADR-0006**](0006-llm-provider-mistral.md) | Mistral API qua OpenAI-compatible protocol | `Superseded` | 2026-10-09 |
+| [**ADR-0007**](0007-llm-provider-groq.md) | Groq API qua OpenAI-compatible protocol | `Accepted for validation` | 2026-10-09 |
 | [**ADR-0003**](0003-data-crawler-official-gazettes.md) | Chiến lược Thu thập Dữ liệu — Tự động Cào & Tải từ Cổng VBPL Chính thức | `Accepted` | 2026-10-04 |
 | [**ADR-0004**](0004-qdrant-hybrid-retrieval.md) | Lựa chọn Qdrant Vector Store & Kiến trúc Hybrid Retrieval | `Accepted` | 2026-10-04 |
 
