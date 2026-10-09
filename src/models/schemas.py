@@ -1,7 +1,8 @@
+from datetime import date
 from enum import StrEnum
 from typing import Any
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class ResponseStatus(StrEnum):
@@ -74,6 +75,13 @@ class LegalQARequest(BaseModel):
         default=True, description="Whether to include agent reasoning trace in response"
     )
 
+    @field_validator("as_of_date")
+    @classmethod
+    def validate_as_of_date(cls, value: str | None) -> str | None:
+        if value is not None:
+            date.fromisoformat(value)
+        return value
+
 
 class LegalQAResponse(BaseModel):
     """Outgoing response for legal question answering conforming to PRD Section 10."""
@@ -103,6 +111,14 @@ class FeedbackRequest(BaseModel):
     query_id: str = Field(..., description="Query ID or UUID")
     rating: str = Field(..., description="'positive' or 'negative'")
     comment: str | None = Field(None, description="Optional user comment")
+
+    @field_validator("rating")
+    @classmethod
+    def validate_rating(cls, value: str) -> str:
+        normalized = value.lower()
+        if normalized not in {"positive", "negative"}:
+            raise ValueError("rating must be 'positive' or 'negative'")
+        return normalized
 
 
 class HealthResponse(BaseModel):

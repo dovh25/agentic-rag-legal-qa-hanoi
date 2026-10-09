@@ -47,6 +47,10 @@ venv.bak/
 *~
 .DS_Store
 
+# Next.js frontend
+web/node_modules/
+web/.next/
+
 # Testing & Coverage
 .coverage
 .coverage.*

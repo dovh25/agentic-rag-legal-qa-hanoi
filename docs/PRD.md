@@ -672,6 +672,19 @@ gantt
 
 ## 15. Phụ lục
 
+### 15.1 MVP Cloud Deployment (Tuần 2)
+
+MVP phải có deployment demo công khai theo topology **Vercel (Next.js) → Render
+(FastAPI Docker) → Qdrant Cloud Free**, với Gemini/provider tương thích ở lớp inference.
+Render là stateless; Qdrant Cloud giữ collection `legal_chunks` và là nguồn dữ liệu bền
+vững. Deployment cần health check `/health`, API health `/api/v1/health`, CORS theo domain
+frontend, secrets ngoài Git, quy trình index P0 lặp lại được, kiểm tra public smoke flow,
+free-tier caveats và rollback. Chi tiết vận hành nằm tại
+[docs/deployment/MVP_CLOUD.md](deployment/MVP_CLOUD.md).
+
+Local development được phép dùng `.env` hiện tại qua settings loader, nhưng không được
+in/log/commit giá trị API key. Khi deploy, nhập secrets trực tiếp trên provider.
+
 ### Thuật ngữ
 
 | Thuật ngữ | Giải thích |

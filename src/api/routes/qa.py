@@ -1,10 +1,13 @@
+import asyncio
 import time
+from collections import defaultdict
 from datetime import date
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 
 from src.api.deps import get_agent_graph
+from src.core.config import get_settings
 from src.core.logging import logger
 from src.models.schemas import (
     FeedbackRequest,
@@ -16,6 +19,20 @@ from src.models.schemas import (
 )
 
 router = APIRouter(tags=["Legal QA"])
+_request_timestamps: dict[str, list[float]] = defaultdict(list)
+
+
+def _check_access(api_key: str | None, client_key: str | None) -> None:
+    settings = get_settings()
+    if settings.API_KEY and api_key != settings.API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    key = client_key or "anonymous"
+    now = time.time()
+    timestamps = [item for item in _request_timestamps[key] if now - item < 60]
+    if len(timestamps) >= settings.RATE_LIMIT_PER_MINUTE:
+        raise HTTPException(status_code=429, detail="Rate limit exceeded")
+    timestamps.append(now)
+    _request_timestamps[key] = timestamps
 
 
 @router.post(
@@ -33,9 +50,12 @@ router = APIRouter(tags=["Legal QA"])
 async def ask_legal_question(
     request: LegalQARequest,
     agent_graph=Depends(get_agent_graph),
+    api_key: str | None = Header(default=None, alias="X-API-Key"),
+    client_key: str | None = Header(default=None, alias="X-Client-Key"),
 ) -> LegalQAResponse:
     start_time = time.time()
     try:
+        _check_access(api_key, client_key)
         effective_date = request.as_of_date or str(date.today())
         initial_state = {
             "query": request.query,
@@ -45,7 +65,7 @@ async def ask_legal_question(
         }
 
         # Invoke LangGraph agent
-        final_state = agent_graph.invoke(initial_state)
+        final_state = await asyncio.to_thread(agent_graph.invoke, initial_state)
 
         citations: list[LegalCitation] = []
         for c in final_state.get("citations", []):
@@ -76,6 +96,8 @@ async def ask_legal_question(
                 "route_taken": final_state.get("route"),
             },
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error processing question: {str(e)}")
         raise HTTPException(
@@ -91,8 +113,9 @@ async def ask_legal_question(
 )
 async def health_check() -> HealthResponse:
     """Returns system status, connected components, and corpus size."""
-    qdrant_status = "connected"
-    corpus_size = 81
+    settings = get_settings()
+    qdrant_status = "disconnected"
+    corpus_size = 0
     try:
         from src.agent.tools import get_retriever
 
@@ -105,11 +128,15 @@ async def health_check() -> HealthResponse:
     except Exception as e:
         logger.warning(f"Health check Qdrant status check: {e}")
 
+    llm_status = "configured" if settings.OPENAI_API_KEY else "not_configured"
+    overall_status = (
+        "healthy" if qdrant_status == "connected" and llm_status == "configured" else "degraded"
+    )
     return HealthResponse(
-        status="healthy",
+        status=overall_status,
         version="1.0.0",
         qdrant=qdrant_status,
-        llm="connected",
+        llm=llm_status,
         corpus_size=corpus_size,
     )
 

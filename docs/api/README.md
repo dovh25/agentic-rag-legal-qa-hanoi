@@ -3,6 +3,10 @@
 > Tài liệu đặc tả kỹ thuật và hợp đồng API (API Contracts) cho hệ thống Hỏi đáp Pháp luật Đất đai & Quy hoạch TP. Hà Nội.  
 > Framework: **FastAPI** | Data Validation: **Pydantic v2** | Runtime: **Uvicorn**
 
+Production demo chạy FastAPI trên Render; frontend Vercel gọi qua
+`NEXT_PUBLIC_API_BASE_URL`. Health và error behavior trong cloud được kiểm tra theo
+[MVP cloud runbook](../deployment/MVP_CLOUD.md).
+
 ---
 
 ## 1. Tổng quan Endpoints
