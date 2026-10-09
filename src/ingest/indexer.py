@@ -71,11 +71,15 @@ class QdrantLegalIndexer:
                 # Create Payload Indexes for fast metadata filtering (ADR-0004)
                 for field_name in [
                     "doc_id",
+                    "doc_number",
+                    "doc_title",
                     "legal_status",
-                    "document_number",
-                    "article_ref",
+                    "effective_from",
+                    "effective_to",
+                    "scope",
+                    "article",
                     "administrative_area",
-                    "effective_date",
+                    "corpus_version",
                 ]:
                     client.create_payload_index(
                         collection_name=self.collection_name,
@@ -93,6 +97,29 @@ class QdrantLegalIndexer:
                 f"Could not connect to Qdrant at {self.host}:{self.port} ({e}). Running in offline/mock mode."
             )
             return False
+
+    def recreate_versioned_collection(self, collection_name: str) -> bool:
+        """Create a clean versioned collection without touching the active one."""
+        original = self.collection_name
+        self.collection_name = collection_name
+        try:
+            client = self.connect()
+            if collection_name in [c.name for c in client.get_collections().collections]:
+                client.delete_collection(collection_name=collection_name)
+            return self.ensure_collection()
+        finally:
+            self.collection_name = original
+
+    def promote_alias(self, collection_name: str, alias_name: str) -> None:
+        """Atomically point an alias at a validated collection."""
+        client = self.connect()
+        aliases = client.get_collection_aliases().aliases
+        actions: list[qmodels.CreateAlias] = []
+        for alias in aliases:
+            if alias.alias_name == alias_name:
+                actions.append(qmodels.DeleteAlias(alias_name=alias_name))
+        actions.append(qmodels.CreateAlias(collection_name=collection_name, alias_name=alias_name))
+        client.update_collection_aliases(change_aliases_operations=actions)
 
     def generate_embeddings(self, texts: list[str]) -> list[list[float]]:
         """Generate dense embeddings using BGE-M3 or fallback to normalized mock vectors."""

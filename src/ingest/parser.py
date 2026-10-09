@@ -17,6 +17,8 @@ class ParsedArticle:
     article_title: str  # e.g., "Thu hồi đất để phát triển kinh tế..."
     chapter_number: str | None = None
     chapter_title: str | None = None
+    section_number: str | None = None
+    section_title: str | None = None
     full_text: str = ""
     clauses: list[ParsedClause] = field(default_factory=list)
 
@@ -31,6 +33,20 @@ class ParsedDocument:
     effective_date: str
     source_url: str
     administrative_area: list[str]
+    issued_date: str = ""
+    effective_to: str | None = None
+    legal_status: str = "active"
+    replaced_by: str | None = None
+    amended_by: list[str] = field(default_factory=list)
+    legal_domain: list[str] = field(default_factory=list)
+    scope: str = "national"
+    applicable_district: list[str] | None = None
+    source_authority: str = ""
+    corpus_tier: str = "P0"
+    snapshot_sha256: str = ""
+    source_fetched_at: str | None = None
+    parser_version: str = "parser-v2"
+    corpus_version: str = "2026-10-04.1"
     articles: list[ParsedArticle] = field(default_factory=list)
 
 
@@ -42,6 +58,7 @@ class VietnameseLegalParser:
         r"^(?:Chương|CHƯƠNG)\s+([IVXLCDM\d]+)[:\.\s\-]+([^\n]+)", re.IGNORECASE
     )
     CHAPTER_STANDALONE = re.compile(r"^(?:Chương|CHƯƠNG)\s+([IVXLCDM\d]+)\.?$", re.IGNORECASE)
+    SECTION_PATTERN = re.compile(r"^(?:Mục|MỤC)\s+([IVXLCDM\d]+)[\.: -]*(.*)$", re.IGNORECASE)
     ARTICLE_PATTERN = re.compile(r"^(?:Điều|ĐIỀU)\s+(\d+)[\.:\s\-]+([^\n]+)", re.IGNORECASE)
     CLAUSE_PATTERN = re.compile(r"^(\d+)\.\s+([^\n]+)", re.MULTILINE)
     POINT_PATTERN = re.compile(r"^([a-zđ])\)\s+([^\n]+)", re.MULTILINE)
@@ -57,12 +74,28 @@ class VietnameseLegalParser:
             effective_date=metadata.get("effective_date", ""),
             source_url=metadata.get("source_url", ""),
             administrative_area=metadata.get("administrative_area", ["Hà Nội"]),
+            issued_date=metadata.get("issued_date", ""),
+            effective_to=metadata.get("expiry_date"),
+            legal_status=metadata.get("legal_status", "active"),
+            replaced_by=metadata.get("replaced_by"),
+            amended_by=metadata.get("amended_by", []),
+            legal_domain=metadata.get("legal_domain", []),
+            scope=metadata.get("scope", "national"),
+            applicable_district=metadata.get("applicable_district"),
+            source_authority=metadata.get("source_authority", ""),
+            corpus_tier=metadata.get("corpus_tier", "P0"),
+            snapshot_sha256=metadata.get("sha256", ""),
+            source_fetched_at=metadata.get("source_fetched_at"),
+            parser_version=metadata.get("parser_version", "parser-v2"),
+            corpus_version=metadata.get("corpus_version", "2026-10-04.1"),
         )
 
-        lines = text.split("\n")
+        lines = [re.sub(r"\s+", " ", line).strip() for line in text.splitlines()]
         current_chapter_num: str | None = None
         current_chapter_title: str | None = None
         waiting_for_chapter_title: bool = False
+        current_section_num: str | None = None
+        current_section_title: str | None = None
 
         current_article: ParsedArticle | None = None
         article_lines: list[str] = []
@@ -73,7 +106,8 @@ class VietnameseLegalParser:
                 continue
 
             # Capture chapter title if previous line was standalone chapter number
-            if waiting_for_chapter_title:
+            section_match = self.SECTION_PATTERN.match(line_str)
+            if waiting_for_chapter_title and not section_match:
                 waiting_for_chapter_title = False
                 if not self.ARTICLE_PATTERN.match(line_str):
                     current_chapter_title = line_str
@@ -95,6 +129,11 @@ class VietnameseLegalParser:
                 waiting_for_chapter_title = True
                 continue
 
+            if section_match:
+                current_section_num = section_match.group(1).strip()
+                current_section_title = section_match.group(2).strip() or None
+                continue
+
             # Check Article
             art_match = self.ARTICLE_PATTERN.match(line_str)
             if art_match:
@@ -110,6 +149,8 @@ class VietnameseLegalParser:
                     article_title=art_title,
                     chapter_number=current_chapter_num,
                     chapter_title=current_chapter_title,
+                    section_number=current_section_num,
+                    section_title=current_section_title,
                 )
                 article_lines = [line_str]
             else:

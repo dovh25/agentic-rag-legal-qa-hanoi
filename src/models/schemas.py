@@ -129,3 +129,5 @@ class HealthResponse(BaseModel):
     qdrant: str = "connected"
     llm: str = "connected"
     corpus_size: int = 1250
+    active_collection: str = "legal_chunks"
+    corpus_version: str | None = None

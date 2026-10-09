@@ -26,7 +26,10 @@ class Settings(BaseSettings):
     QDRANT_HOST: str = "localhost"
     QDRANT_PORT: int = 6333
     QDRANT_COLLECTION: str = "legal_chunks"
+    QDRANT_ACTIVE_ALIAS: str = "legal_chunks"
     QDRANT_API_KEY: str | None = None
+    CORPUS_VERSION: str = "2026-10-09.1"
+    EMBEDDING_REVISION: str = "bge-m3-1024-v1"
 
     # Database
     DATABASE_URL: str | None = None

@@ -91,7 +91,7 @@ stateDiagram-v2
 2. **`planner_node`**:
    - Phân rã câu hỏi so sánh/đa bước thành 2-3 câu hỏi con nguyên tử (sub-queries) để truy xuất toàn diện các khía cạnh pháp luật.
 3. **`retrieval_node`**:
-   - Gọi `HybridRetriever` thực thi tìm kiếm kết hợp Dense Vector (BGE-M3) và Lexical Search (BM25) trên collection `legal_chunks` của Qdrant.
+   - Gọi `HybridRetriever` truy vấn collection alias `legal_chunks`; dense retrieval đã triển khai, còn sparse/BM25 chỉ được bật khi index tương ứng tồn tại.
    - Lọc metadata theo mốc hiệu lực thời gian `as_of_date` và địa bàn hành chính.
 4. **`grader_node`**:
    - Rà soát độ liên quan ngữ nghĩa và trường từ vựng pháp lý của các đoạn trích.
@@ -113,10 +113,10 @@ stateDiagram-v2
 flowchart LR
     A["Cổng VBPL / Công báo Hà Nội\n(vanban.chinhphu.vn, congbao.hanoi.gov.vn)"] --> B["Crawler & Scraper\n(httpx + BeautifulSoup4)"]
     B --> C["Raw Snapshot & Checksum\n(data/corpus/raw/ + manifest.json)"]
-    C --> D["Legislative Parser\n(Chương > Điều > Khoản > Điểm)"]
+    C --> D["Legislative Parser\n(Chương > Mục > Điều > Khoản > Điểm)"]
     D --> E["Contextual Breadcrumb Chunker\n[Văn bản] > [Chương] > [Điều] > [Khoản]"]
     E --> F["Vector Embedder\nBAAI/bge-m3 (1024 dims + BM25)"]
-    F --> G[("Qdrant Collection\nlegal_chunks\nPayload Indexes: doc_id, effective_date, district")]
+    F --> G[("Qdrant versioned collection\nlegal_chunks_vN\n→ alias legal_chunks")]
 ```
 
 ### Đặc điểm nổi bật của Chunking:
@@ -140,9 +140,13 @@ flowchart LR
 
 ---
 
-## 5. Danh mục Văn bản Pháp lý Hạt nhân (Corpus P0 — Đã Lập chỉ mục)
+## 5. Danh mục Văn bản Pháp lý Hạt nhân (Corpus rebuild)
 
-Toàn bộ 81 chunks đã được lập chỉ mục và kiểm thử trên Qdrant Cloud:
+Pipeline hiện tạo metadata canonical (`doc_number`, `effective_from`, `article`, provenance,
+checksum và `corpus_version`) và phải chạy validation trước khi index. Rebuild cloud dùng
+collection version mới, sau đó promote alias nguyên tử; collection cũ được giữ lại để rollback.
+Không được promote snapshot `fallback_unverified`. Corpus P0 + P1 hiện có 8 tài liệu đăng ký
+và 81 chunks trong lần dry-run local gần nhất; đây chưa phải là xác nhận đã index production.
 1. **Luật Đất đai số 31/2024/QH15** (Ban hành: 18/01/2024, Hiệu lực: 01/08/2024).
 2. **Nghị định số 88/2024/NĐ-CP** (Bồi thường, hỗ trợ, tái định cư khi Nhà nước thu hồi đất).
 3. **Nghị định số 102/2024/NĐ-CP** (Quy định chi tiết thi hành một số điều của Luật Đất đai).

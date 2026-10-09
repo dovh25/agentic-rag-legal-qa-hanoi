@@ -49,3 +49,20 @@ BỒI THƯỜNG, HỖ TRỢ, TÁI ĐỊNH CƯ
     assert first_chunk.metadata["clause"] == "Khoản 1"
     assert first_chunk.metadata["legal_status"] == "active"
     assert "Hà Nội" in first_chunk.metadata["administrative_area"]
+
+
+def test_chunk_ids_are_deterministic_and_include_section():
+    raw = "Chương I\nMục 1. Quy định\nĐiều 1. Phạm vi\n1. Nội dung."
+    metadata = {
+        "doc_id": "doc-1",
+        "document_title": "Văn bản",
+        "document_number": "1/2024",
+        "effective_date": "2024-01-01",
+        "source_url": "https://example.com",
+        "administrative_area": ["Hà Nội"],
+    }
+    parser = VietnameseLegalParser()
+    first = LegalChunker().chunk_document(parser.parse(raw, metadata))
+    second = LegalChunker().chunk_document(parser.parse(raw, metadata))
+    assert first[0].chunk_id == second[0].chunk_id == "doc-1-d1-k1"
+    assert "[Mục 1: Quy định]" in first[0].breadcrumb
