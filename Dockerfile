@@ -20,7 +20,6 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy source code and files
 COPY src/ ./src/
 COPY eval/ ./eval/
-COPY .env.example .env
 
 EXPOSE 8000
 

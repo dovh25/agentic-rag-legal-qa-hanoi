@@ -314,6 +314,15 @@ make eval
 
 ---
 
+## ☁️ Cloud demo MVP
+
+Topology triển khai công khai ưu tiên free tier: **Next.js trên Vercel**, **FastAPI
+container trên Render**, **Qdrant Cloud Free** và Gemini/provider tương thích. Render là
+runtime stateless; vector index không lưu trên filesystem ephemeral. Secrets chỉ cấu hình
+trực tiếp ở provider, còn local development có thể đọc từ `.env` nhưng không được commit
+hoặc log giá trị. Xem [docs/deployment/MVP_CLOUD.md](docs/deployment/MVP_CLOUD.md); frontend
+nằm tại [web/](web/) và dùng `NEXT_PUBLIC_API_BASE_URL`.
+
 ## ⚖️ Tuyên bố Miễn trừ Trách nhiệm (Legal Disclaimer)
 
 > **LƯU Ý QUAN TRỌNG:**  

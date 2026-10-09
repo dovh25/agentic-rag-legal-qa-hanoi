@@ -478,16 +478,27 @@ def verify_node(state: AgentState) -> dict[str, Any]:
     for cit in citations:
         source_url = cit.get("source_url")
         snippet = cit.get("snippet", "")
-        if source_url and snippet:
+        if (
+            source_url
+            and snippet
+            and ("vanban.chinhphu.vn" in source_url or "congbao.hanoi.gov.vn" in source_url)
+        ):
             verified_count += 1
 
     steps.append(
         f"Verify: Passed citation provenance check ({verified_count}/{len(citations)} with official portal source URLs)."
     )
-    return {
-        "status": "answered",
-        "reasoning_steps": steps,
-    }
+    if verified_count != len(citations):
+        steps.append(
+            "Verify: FAILED - One or more citations lack an official source URL or snippet."
+        )
+        return {
+            "status": "insufficient_evidence",
+            "answer": "Không đủ bằng chứng pháp lý có thể kiểm chứng để khẳng định câu trả lời.",
+            "citations": [],
+            "reasoning_steps": steps,
+        }
+    return {"status": "answered", "reasoning_steps": steps}
 
 
 def clarification_node(state: AgentState) -> dict[str, Any]:

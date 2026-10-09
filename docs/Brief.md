@@ -197,4 +197,13 @@ gantt
 
 ---
 
-*Brief v1.1 — Xem PRD.md để biết chi tiết đầy đủ.*
+## Cloud demo MVP (bổ sung Tuần 2)
+
+MVP cần có deployment công khai, ưu tiên free tier: **Next.js trên Vercel**, **FastAPI
+container trên Render**, **Qdrant Cloud Free** và Gemini/provider tương thích. Render là
+runtime stateless; vector index không lưu trên filesystem ephemeral. Secrets chỉ cấu hình
+trực tiếp ở provider, còn local development có thể đọc từ `.env` nhưng không được commit
+hoặc log giá trị. Runbook triển khai, bootstrap P0, health check, quota/cold-start và
+rollback được ghi tại [docs/deployment/MVP_CLOUD.md](deployment/MVP_CLOUD.md).
+
+* Brief v1.1 — Xem PRD.md để biết chi tiết đầy đủ.*

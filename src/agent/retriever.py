@@ -52,6 +52,17 @@ class HybridRetriever:
                 self._is_connected = False
         return self.client
 
+    @staticmethod
+    def _is_valid_as_of(payload: dict[str, Any], as_of_date: str | None) -> bool:
+        if not as_of_date:
+            return True
+        effective_date = payload.get("effective_date")
+        expiry_date = payload.get("expiry_date")
+        return not (
+            (effective_date and effective_date > as_of_date)
+            or (expiry_date and expiry_date < as_of_date)
+        )
+
     def retrieve(
         self,
         query: str,
@@ -128,6 +139,8 @@ class HybridRetriever:
                 results = []
                 for point in search_results:
                     payload = point.payload or {}
+                    if not self._is_valid_as_of(payload, as_of_date):
+                        continue
                     doc_title = payload.get("document_title", "")
                     art_ref = payload.get("article_ref")
                     results.append(
@@ -277,6 +290,8 @@ class HybridRetriever:
         chunker = LegalChunker()
 
         for item in manifest:
+            if not self._is_valid_as_of(item, as_of_date):
+                continue
             seed_file = seed_dir / f"{item['doc_id']}.txt"
             if not seed_file.exists():
                 continue

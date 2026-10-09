@@ -3,6 +3,9 @@
 > Tài liệu đặc tả kiến trúc kỹ thuật hệ thống Hỏi đáp Pháp luật Đất đai & Quy hoạch TP. Hà Nội.  
 > Công nghệ cốt lõi: **LangGraph** · **Google Gemini API (gemini-3.8-flash)** · **Qdrant Vector DB** · **BAAI/bge-m3** · **FastAPI**
 
+> **MVP deployment:** Vercel (Next.js) → Render (FastAPI Docker) → Qdrant Cloud Free.
+> Xem [cloud runbook](../deployment/MVP_CLOUD.md) để biết bootstrap, secrets và rollback.
+
 ---
 
 ## 1. Kiến trúc Tổng thể (High-Level System Architecture)
