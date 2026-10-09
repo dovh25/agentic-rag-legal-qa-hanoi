@@ -8,7 +8,7 @@ MVP dùng ba dịch vụ có free tier:
 Vercel (Next.js) ──HTTPS──> Render Web Service (FastAPI Docker)
                                   │
                                   ├──> Qdrant Cloud Free (legal_chunks)
-                                  └──> Google Gemini API / provider tương thích
+                                  └──> Mistral API / provider tương thích
 ```
 
 Render là runtime stateless. Không dùng filesystem hoặc volume ephemeral của Render để
@@ -26,7 +26,7 @@ nhập trực tiếp các biến sau vào Environment; trên Vercel chỉ nhập
 
 | Variable | Mục đích |
 |---|---|
-| `OPENAI_API_KEY` | Gemini/OpenAI-compatible provider key |
+| `OPENAI_API_KEY` | Mistral/OpenAI-compatible provider key (secret) |
 | `OPENAI_BASE_URL` | Base URL provider |
 | `MODEL_NAME` | Model inference |
 | `QDRANT_URL` | HTTPS endpoint của Qdrant Cloud |
@@ -95,7 +95,7 @@ cũng bị chặn. Crawler hiện tải attachment PDF chính thức và dùng O
 - Render free tier có thể cold start/sleep; đo latency lần đầu riêng với steady-state.
 - Qdrant Cloud Free có giới hạn dung lượng, request và retention; theo dõi quota trước khi
   mở rộng P1.
-- Gemini/provider có RPM/quota; giữ giới hạn request, timeout và deterministic fallback.
+- Mistral/provider có RPM/quota; giữ giới hạn request, timeout và deterministic fallback.
 - Khi deploy lỗi, rollback Render về image/commit trước; frontend Vercel có thể promote
   deployment trước. Nếu cloud unavailable, chạy `make docker-up` và trỏ frontend về
   `http://localhost:8000`.

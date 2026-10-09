@@ -17,8 +17,9 @@ class Settings(BaseSettings):
 
     # LLM Settings
     OPENAI_API_KEY: str | None = None
-    OPENAI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
-    MODEL_NAME: str = "gemini-3.8-flash"
+    OPENAI_BASE_URL: str = "https://api.mistral.ai/v1"
+    MODEL_NAME: str = "mistral-small-latest"
+    LLM_PROVIDER: str = "mistral"
     EMBEDDING_MODEL: str = "text-embedding-004"
 
     # Vector Database (Qdrant)
