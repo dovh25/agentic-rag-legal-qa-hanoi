@@ -1,4 +1,4 @@
-.PHONY: help install dev lint format test eval docker-build docker-up docker-down clean
+.PHONY: help install dev lint format test eval eval-week3 ragas-report docker-build docker-up docker-down clean
 
 help:
 	@echo "Available commands:"
@@ -31,6 +31,12 @@ test:
 
 eval:
 	python -m eval.scripts.run_eval
+
+eval-week3:
+	python -m eval.scripts.run_week3_eval
+
+ragas-report:
+	python -m eval.scripts.ragas_report
 
 docker-build:
 	docker build -t agentic-rag-legal-qa-hanoi:latest .
