@@ -1,7 +1,5 @@
 import hashlib
 import json
-import logging
-from typing import Any
 
 import redis.asyncio as redis
 from redis.asyncio import Redis

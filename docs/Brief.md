@@ -1,14 +1,15 @@
 # Project Brief
 
-> **Implementation baseline (2026-10-09):** The deployed target architecture is Next.js/Vercel
+> **Implementation baseline (2026-10-10):** The deployed target architecture is Next.js/Vercel
 > → FastAPI Docker/Render → Qdrant Cloud → Groq API. The active corpus is selected through
-> alias `legal_chunks` and currently resolves to `legal_chunks_20261009_2` with 1,956 points.
-> BAAI/bge-m3 dense retrieval is active; sparse BM25/RRF is not yet active. Chat history is
-> browser-local IndexedDB and chat responses use the stateless SSE endpoint.
+> alias `legal_chunks` and currently resolves to `legal_chunks_20261010_1` with 1,956 points.
+> BAAI/bge-m3 dense + sparse BM25 retrieval is active with RRF fusion; Redis cache (TTL 30 days)
+> for embeddings via Hugging Face Inference API. Chat history is browser-local IndexedDB and
+> chat responses use the stateless SSE endpoint. LLM: Groq `openai/gpt-oss-20b` (OpenAI-compatible).
 # Agentic RAG Legal QA — Hà Nội
 
 > **Loại tài liệu**: Project Brief (Tóm tắt dự án chiến lược)
-> **Phiên bản**: v1.2 | **Ngày**: 2026-10-09 | **Tác giả**: Vũ Huy Đô
+> **Phiên bản**: v1.3 | **Ngày**: 2026-10-10 | **Tác giả**: Vũ Huy Đô
 
 ---
 
@@ -46,7 +47,7 @@ flowchart LR
     Q["Câu hỏi\ntiếng Việt"] --> A["LangGraph\nAgent"]
     A --> R["Phân tích\n& Route"]
     R --> S["Truy xuất\nQdrant"]
-    S --> G["Tổng hợp\nGroq llama-3.3-70b-versatile"]
+    S --> G["Tổng hợp\nGroq openai/gpt-oss-20b"]
     G --> ANS["Câu trả lời\n+ Trích dẫn\n+ URL nguồn"]
 ```
 
@@ -99,8 +100,8 @@ flowchart LR
 | Layer | Công nghệ |
 |---|---|
 | **Agent Orchestration** | LangGraph 0.2+ |
-| **LLM** | Groq (`llama-3.3-70b-versatile` qua OpenAI-compatible endpoint) |
-| **Embedding** | BAAI/bge-m3 (1024 dims dense; sparse/BM25 chưa active trong production) |
+| **LLM** | Groq (`openai/gpt-oss-20b` qua OpenAI-compatible endpoint) |
+| **Embedding** | BAAI/bge-m3 (1024 dims dense + sparse BM25 via Hugging Face Inference API + Redis Cache) |
 | **Vector Store** | Qdrant (Qdrant Cloud / Docker local / collection: legal_chunks) |
 | **Data Ingestion** | Automated Crawler & Parser (vanban.chinhphu.vn, congbao.hanoi.gov.vn) |
 | **API** | FastAPI + Uvicorn |
@@ -109,6 +110,8 @@ flowchart LR
 | **Containerization** | Docker + Docker Compose |
 | **Eval** | RAGAS + custom golden set |
 | **CI** | Ruff (lint/format) + pytest |
+| **Cache** | Redis (embedding cache, TTL 30 days) |
+| **Monitoring** | Prometheus + Grafana |
 
 ---
 
@@ -221,7 +224,7 @@ rollback được ghi tại [docs/deployment/MVP_CLOUD.md](deployment/MVP_CLOUD.
 Đánh giá đầy đủ và các điều kiện còn thiếu xem
 [docs/PROJECT_STATUS.md](PROJECT_STATUS.md).
 
-* Brief v1.1 — Xem PRD.md để biết chi tiết đầy đủ.*
+* Brief v1.3 — Xem PRD.md để biết chi tiết đầy đủ.*
 # Chatbot UX direction
 
 The MVP UI is being redesigned as a multi-turn chatbot. Users can create and revisit local

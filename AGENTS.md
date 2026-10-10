@@ -47,7 +47,7 @@ Hệ thống Agentic RAG chuyên sâu phục vụ tra cứu, diễn giải và �
 ## 3. Technology Stack & Directory Structure
 
 - **Ngôn ngữ & Runtime**: Python 3.11+
-- **LLM Inference Engine**: Groq API (`llama-3.3-70b-versatile` qua OpenAI-compatible protocol - Free Tier)
+- **LLM Inference Engine**: Groq API (`openai/gpt-oss-20b` qua OpenAI-compatible protocol - Free Tier)
 - **Embedding Model**: `BAAI/bge-m3` qua **Hugging Face Inference API** (GPU-accelerated, Free Tier) với **Redis Cache** (TTL 30 ngày)
 - **API Framework**: FastAPI, Pydantic v2, Uvicorn
 - **Agent Orchestration**: LangGraph 0.2+, LangChain Core

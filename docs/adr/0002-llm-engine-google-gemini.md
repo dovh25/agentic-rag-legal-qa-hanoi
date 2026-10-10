@@ -1,10 +1,11 @@
 # ADR-0002: Lựa chọn LLM Engine — Google Gemini API (Free Tier qua OpenAI Protocol)
 
-- **Trạng thái**: Superseded by ADR-0006
+- **Trạng thái**: Superseded by ADR-0007 (Groq)
 - **Ngày quyết định**: 2026-10-04
 - **Người quyết định**: Vũ Huy Đô (Senior AI Engineer / Tech Lead)
 - **Tài liệu liên quan**: [docs/PRD.md](../PRD.md), [docs/Brief.md](../Brief.md), [.env.example](../../.env.example)
 
+> **Note:** Quyết định ban đầu chọn Google Gemini đã được thay thế. Xem ADR-0006 (Mistral) và ADR-0007 (Groq - hiện tại active).
 ---
 
 ## 1. Bối cảnh & Vấn đề (Context)

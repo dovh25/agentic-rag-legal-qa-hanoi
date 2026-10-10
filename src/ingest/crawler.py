@@ -349,7 +349,7 @@ class LegalCrawler:
         if not HAS_RAPIDOCR or self._ocr is None:
             logger.warning("RapidOCR not available, skipping OCR")
             return ""
-        
+
         import pypdfium2 as pdfium
 
         document = pdfium.PdfDocument(str(pdf_path))

@@ -18,9 +18,14 @@ class Settings(BaseSettings):
     # LLM Settings
     OPENAI_API_KEY: str | None = None
     OPENAI_BASE_URL: str = "https://api.groq.com/openai/v1"
-    MODEL_NAME: str = "llama-3.3-70b-versatile"
+    MODEL_NAME: str = "openai/gpt-oss-20b"
     LLM_PROVIDER: str = "groq"
     EMBEDDING_MODEL: str = "BAAI/bge-m3"
+
+    # GPT-OSS specific settings
+    GPT_OSS_TEMPERATURE: float = 0.1
+    GPT_OSS_MAX_TOKENS: int = 4096
+    GPT_OSS_TOP_P: float = 0.9
 
     # Hugging Face Embedding API (GPU-accelerated, free tier)
     HUGGINGFACE_API_KEY: str | None = None

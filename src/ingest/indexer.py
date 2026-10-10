@@ -1,6 +1,6 @@
+import re
 import uuid
 from collections import Counter
-import re
 from functools import lru_cache
 
 from qdrant_client import QdrantClient
@@ -9,8 +9,8 @@ from qdrant_client.models import SparseVector
 
 from src.core.config import get_settings
 from src.core.logging import logger
-from src.ingest.chunker import LegalChunk
 from src.embedding.hf_client import get_hf_embedding_client
+from src.ingest.chunker import LegalChunk
 
 
 class QdrantLegalIndexer:
@@ -214,11 +214,11 @@ class QdrantLegalIndexer:
                       "gì", "sao", "thế", "công", "gia", "nhất", "như", "nếu", "để",
                       "do", "thức", "ngon", "truyền", "cách", "làm", "ngày", "tết"}
         tokens = [t for t in tokens if t not in stop_words and len(t) > 1]
-        
+
         tf = Counter(tokens)
         if not tf:
             return SparseVector(indices=[], values=[])
-        
+
         # Use deterministic hash-based indexing with collision handling
         # Use a consistent hash function to avoid Python's hash randomization
         import hashlib
@@ -233,10 +233,10 @@ class QdrantLegalIndexer:
                 idx = (idx + 1) % 1000000
             term_to_idx[term] = idx
             used_indices.add(idx)
-        
+
         indices = [term_to_idx[term] for term in tf]
         values = [float(tf[term]) for term in tf]
-        
+
         return SparseVector(indices=indices, values=values)
 
     async def index_chunks(self, chunks: list[LegalChunk], batch_size: int = 64) -> int:
@@ -258,10 +258,10 @@ class QdrantLegalIndexer:
         for i, chunk in enumerate(chunks):
             # Deterministic UUID from chunk_id
             point_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, chunk.chunk_id))
-            
+
             # Generate sparse vector for this chunk
             sparse_vector = self._build_sparse_vector(chunk.text)
-            
+
             payload = {
                 **chunk.metadata,
                 "text": chunk.text,

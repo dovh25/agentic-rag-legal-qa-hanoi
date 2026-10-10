@@ -1,5 +1,5 @@
 {
-  "name": "legal-qa-hanoi-web",
+  "name": "luat-gpt-web",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -8,14 +8,36 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@tailwindcss/typography": "0.5.16",
+    "clsx": "^2.1.1",
+    "date-fns": "^3.6.0",
+    "idb": "^8.0.0",
+    "katex": "^0.16.10",
+    "lucide-react": "^0.400.0",
     "next": "^14.2.0",
     "react": "^18.3.0",
-    "react-dom": "^18.3.0"
+    "react-dom": "^18.3.0",
+    "react-markdown": "^9.0.1",
+    "rehype-highlight": "^7.0.0",
+    "rehype-katex": "^7.0.0",
+    "remark-gfm": "^4.0.0",
+    "remark-math": "^6.0.0",
+    "sucrase": "3.34.0",
+    "tailwind-merge": "^2.6.1",
+    "tailwindcss": "3.4.17",
+    "uuid": "^9.0.0",
+    "zustand": "^4.5.0"
   },
   "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
     "@types/node": "^20.0.0",
-    "@types/react": "^18.0.0",
-    "@types/react-dom": "^18.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "@types/uuid": "^9.0.0",
+    "autoprefixer": "^10.4.0",
+    "eslint": "^8.0.0",
+    "eslint-config-next": "^14.2.0",
+    "postcss": "8.4.31",
     "typescript": "^5.0.0"
   }
 }

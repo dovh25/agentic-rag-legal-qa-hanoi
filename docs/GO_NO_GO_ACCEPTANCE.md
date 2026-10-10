@@ -60,7 +60,7 @@ The repository now provides reproducible starting points for the evidence run:
 - `python scripts/production_smoke.py` checks health, query, clarification and SSE
   completion without storing response secrets.
 - Render provider configuration: set the rotated `OPENAI_API_KEY` secret, then
-  `OPENAI_BASE_URL=https://api.groq.com/openai/v1`, `MODEL_NAME=llama-3.3-70b-versatile`
+  `OPENAI_BASE_URL=https://api.groq.com/openai/v1`, `MODEL_NAME=openai/gpt-oss-20b`
   and `LLM_PROVIDER=groq` before redeploying.
 - `eval/load/k6_chat.js` defines single-hop and multi-hop production load scenarios.
 - `eval/security/prompt_injection_cases.json` is the seed matrix for the security review.

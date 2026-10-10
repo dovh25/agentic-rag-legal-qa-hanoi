@@ -5,9 +5,10 @@
 - **Người quyết định**: Vũ Huy Đô (Senior AI Engineer / Tech Lead)
 - **Tài liệu liên quan**: [docs/PRD.md](../PRD.md), [docs/Brief.md](../Brief.md), [docker-compose.yml](../../docker-compose.yml)
 
-> **Implementation note (2026-10-09):** Qdrant Cloud và dense vector retrieval đang active
-> trên collection/alias `legal_chunks`. Payload filtering và document-number prioritization
-> đang active; sparse BM25/RRF là phần kiến trúc chưa hoàn tất và phải được đánh giá riêng.
+> **Implementation note (2026-10-10):** Dense 1024-dim retrieval và Sparse BM25 retrieval đều đã active
+> trên collection/alias `legal_chunks` (1,956 chunks). Hybrid retrieval với RRF fusion
+> hoạt động trong production. Payload filtering (legal_status, administrative_area, effective_date)
+> và document-number prioritization đang active.
 
 ---
 
@@ -21,8 +22,7 @@ Truy xuất văn bản pháp luật đòi hỏi một cơ chế lưu trữ và t
 Dự án quyết định chọn **Qdrant** làm Vector Database chính:
 - **Collection**: `legal_chunks`
 - **Dense Vector**: 1024-dim (`BAAI/bge-m3`), Cosine distance.
-- **Sparse Vector / Payload BM25**: Qdrant hỗ trợ, nhưng implementation production hiện chưa
-  bật sparse vector/RRF; payload indexes và query document-number matching đang được dùng.
+- **Sparse Vector / Payload BM25**: Đã implement và active trong production; Qdrant sparse vector field `text` với RRF fusion.
 - **Payload Index**: Đánh chỉ mục trường `doc_id`, `legal_status`, `document_number`, `article_ref`, `administrative_area`, `effective_date`.
 - **Triển khai**: Hỗ trợ linh hoạt cả Qdrant Cloud Cluster (quản lý qua `QDRANT_URL` và `QDRANT_API_KEY`) hoặc Container hóa qua Docker Compose (`qdrant/qdrant:latest`).
 

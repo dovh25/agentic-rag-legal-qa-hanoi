@@ -14,7 +14,7 @@ Vercel (Next.js) ──HTTPS──> Render Web Service (FastAPI Docker)
 Render là runtime stateless. Không dùng filesystem hoặc volume ephemeral của Render để
 lưu corpus/vector index; Qdrant Cloud là nguồn dữ liệu bền vững. Runtime phải truy vấn
 alias `legal_chunks`, không hard-code collection vật lý; alias hiện trỏ tới
-`legal_chunks_20261009_2` (1.956 points, 1024/Cosine). Docker Compose vẫn
+`legal_chunks_20261010_1` (1.956 points, 1024/Cosine). Docker Compose vẫn
 là fallback khi free tier ngủ hoặc hết quota.
 
 ## Secrets và biến môi trường
@@ -29,13 +29,20 @@ nhập trực tiếp các biến sau vào Environment; trên Vercel chỉ nhập
 | Variable | Mục đích |
 |---|---|
 | `OPENAI_API_KEY` | Groq/OpenAI-compatible provider key (secret) |
-| `OPENAI_BASE_URL` | Base URL provider |
-| `MODEL_NAME` | Model inference |
+| `OPENAI_BASE_URL` | Base URL provider (`https://api.groq.com/openai/v1`) |
+| `MODEL_NAME` | Model inference (`openai/gpt-oss-20b`) |
+| `LLM_PROVIDER` | `groq` |
 | `QDRANT_URL` | HTTPS endpoint của Qdrant Cloud |
 | `QDRANT_API_KEY` | Qdrant key, chỉ cấp quyền cần thiết |
 | `ALLOWED_ORIGINS` | Domain Vercel production, ngăn CORS wildcard |
 | `API_KEY` | API key tùy chọn cho consumer/API |
-| `DEBUG=false` | Tắt debug trong production |
+| `DEBUG` | `false` |
+| `HUGGINGFACE_API_KEY` | HF Inference API token (secret) |
+| `USE_HF_EMBEDDING_API` | `true` |
+| `HF_EMBEDDING_MODEL` | `BAAI/bge-m3` |
+| `HF_EMBEDDING_URL` | `https://api-inference.huggingface.co/models/BAAI/bge-m3` |
+| `REDIS_URL` | Redis connection URL (e.g., `redis://default:password@host:port`) |
+| `EMBEDDING_CACHE_TTL` | `2592000` (30 days) |
 
 ### Vercel web
 
@@ -59,10 +66,10 @@ Production demo hiện tại:
 
 - API: <https://agentic-rag-legal-qa-api.onrender.com>
 - Web: <https://agentic-rag-legal-qa-hanoi.vercel.app>
-- Health đã kiểm tra ngày 2026-10-09: `healthy`, Qdrant `connected`, LLM `configured`,
-  `corpus_size=1956` after the 2026-10-09.2 collection promotion.
-- Backend must be redeployed with `CORPUS_VERSION=2026-10-09.2`; the Qdrant alias is already
-  promoted and the 81-point legacy collection is retained for rollback.
+- Health đã kiểm tra ngày 2026-10-10: `healthy`, Qdrant `connected`, LLM `configured`,
+  `corpus_size=1956`, `corpus_version=2026-10-10.1`, `active_collection=legal_chunks` after the 2026-10-10.1 collection promotion.
+- Backend deployed with `CORPUS_VERSION=2026-10-10.1`; the Qdrant alias is already
+  promoted and the legacy collection is retained for rollback.
 
   ### Chat streaming
 
@@ -70,7 +77,7 @@ Production demo hiện tại:
   `X-Accel-Buffering: no`, disable CDN caching for `/api/v1/chat/stream`, and configure proxy
   timeouts longer than the maximum agent request. The frontend falls back to an explicit
   error state rather than silently storing an incomplete assistant message.
-  đã được promote. Xem [project status](../PROJECT_STATUS.md).
+  Xem [project status](../PROJECT_STATUS.md).
 
 Các collection version cũ phải được giữ lại để rollback. Rollback là thao tác promote alias
 về version trước, sau khi kiểm tra health và một truy vấn smoke test; không dùng thao tác
