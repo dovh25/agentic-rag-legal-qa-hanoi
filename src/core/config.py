@@ -22,6 +22,22 @@ class Settings(BaseSettings):
     LLM_PROVIDER: str = "groq"
     EMBEDDING_MODEL: str = "BAAI/bge-m3"
 
+    # Hugging Face Embedding API (GPU-accelerated, free tier)
+    HUGGINGFACE_API_KEY: str | None = None
+    USE_HF_EMBEDDING_API: bool = True
+    HF_EMBEDDING_MODEL: str = "BAAI/bge-m3"
+    HF_EMBEDDING_URL: str = "https://api-inference.huggingface.co/models/BAAI/bge-m3"
+    HF_EMBEDDING_BATCH_SIZE: int = 32
+    HF_EMBEDDING_TIMEOUT: float = 30.0
+
+    # Redis Cache for Embeddings
+    REDIS_URL: str | None = None
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_DB: int = 0
+    REDIS_PASSWORD: str | None = None
+    EMBEDDING_CACHE_TTL: int = 86400 * 30  # 30 days
+
     # Vector Database (Qdrant)
     QDRANT_URL: str | None = None
     QDRANT_HOST: str = "localhost"

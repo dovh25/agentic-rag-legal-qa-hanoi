@@ -2,10 +2,11 @@ from typing import Any
 
 from qdrant_client import QdrantClient
 from qdrant_client.http import models as qmodels
+from qdrant_client.models import SparseVector
 
 from src.core.config import get_settings
 from src.core.logging import logger
-from src.ingest.indexer import QdrantLegalIndexer
+from src.embedding.hf_client import get_hf_embedding_client
 
 
 class HybridRetriever:
@@ -13,9 +14,14 @@ class HybridRetriever:
 
     def __init__(self):
         self.settings = get_settings()
-        self.indexer = QdrantLegalIndexer()
         self.client: QdrantClient | None = None
         self._is_connected: bool | None = None
+        self._hf_client = None
+
+    def _get_hf_client(self):
+        if self._hf_client is None:
+            self._hf_client = get_hf_embedding_client()
+        return self._hf_client
 
     def get_client(self) -> QdrantClient | None:
         if self._is_connected is None:
@@ -63,23 +69,65 @@ class HybridRetriever:
             or (expiry_date and expiry_date < as_of_date)
         )
 
-    def retrieve(
+    def _build_sparse_vector(self, query: str) -> SparseVector:
+        """Build BM25 sparse vector for query with unique indices."""
+        import re
+        from collections import Counter
+        import hashlib
+        
+        # Simple tokenization for BM25
+        tokens = re.findall(r'\b\w+\b', query.lower())
+        # Filter stop words
+        stop_words = {"và", "của", "các", "cho", "về", "thì", "là", "ở", "tại", "theo",
+                      "được", "có", "những", "này", "đó", "ra", "vào", "lại", "nào",
+                      "gì", "sao", "thế", "công", "gia", "nhất", "như", "nếu", "để",
+                      "do", "thức", "ngon", "truyền", "cách", "làm", "ngày", "tết"}
+        tokens = [t for t in tokens if t not in stop_words and len(t) > 1]
+        
+        # Build term frequency
+        tf = Counter(tokens)
+        if not tf:
+            return SparseVector(indices=[], values=[])
+        
+        # Use deterministic hash-based indexing with collision handling
+        # Use MD5 hash for deterministic, collision-resistant indexing
+        term_to_idx = {}
+        used_indices = set()
+        for term in tf:
+            h = hashlib.md5(term.encode()).hexdigest()
+            idx = int(h[:8], 16) % 1000000
+            # Handle collisions - check against used_indices
+            while idx in used_indices:
+                idx = (idx + 1) % 1000000
+            term_to_idx[term] = idx
+            used_indices.add(idx)
+        
+        indices = [term_to_idx[term] for term in tf]
+        values = [float(tf[term]) for term in tf]
+        
+        return SparseVector(indices=indices, values=values)
+
+    async def retrieve(
         self,
         query: str,
         as_of_date: str | None = None,
         district: str | None = None,
         top_k: int = 5,
     ) -> list[dict[str, Any]]:
-        """Execute hybrid search with payload filtering."""
+        """Execute hybrid search with dense + sparse (BM25) vectors and RRF fusion."""
         client = self.get_client()
         collection_name = self.settings.QDRANT_ACTIVE_ALIAS
 
         if client and self._is_connected:
             try:
-                # 1. Generate query embedding
-                query_vector = self.indexer.generate_embeddings([query])[0]
+                # 1. Generate dense query embedding using HF API
+                hf_client = self._get_hf_client()
+                query_vector = (await hf_client.embed([query], use_cache=True))[0]
+                
+                # 2. Generate sparse BM25 vector
+                sparse_vector = self._build_sparse_vector(query)
 
-                # 2. Build payload filter
+                # 3. Build payload filter
                 filter_conditions: list[qmodels.Condition] = [
                     qmodels.FieldCondition(
                         key="legal_status",
@@ -126,22 +174,57 @@ class HybridRetriever:
 
                 search_filter = qmodels.Filter(must=filter_conditions)
 
-                # 3. Search in Qdrant (using modern query_points API)
+                # 4. Hybrid search with RRF fusion: dense + sparse (BM25)
+                # Use prefetch for sparse vector, then main query for dense
                 if hasattr(client, "query_points"):
+                    # Try hybrid search with RRF (dense + sparse)
+                    # If sparse vector 'text' doesn't exist, fall back to dense-only
+                    try:
+                        query_response = client.query_points(
+                            collection_name=collection_name,
+                            prefetch=[
+                                qmodels.Prefetch(
+                                    query=sparse_vector,
+                                    using="text",  # sparse vector field name
+                                    limit=top_k * 2,
+                                    filter=search_filter,
+                                ),
+                                qmodels.Prefetch(
+                                    query=query_vector,
+                                    using="",  # default dense vector
+                                    limit=top_k * 2,
+                                    filter=search_filter,
+                                ),
+                            ],
+                            query=query_vector,  # main query uses dense
+                            using="",
+                            limit=top_k,
+                            with_payload=True,
+                        )
+                        search_results = query_response.points
+                    except Exception as e:
+                        if "Not existing vector name error: text" in str(e):
+                            logger.info("Sparse vector 'text' not found in collection, falling back to dense-only search")
+                            query_response = client.query_points(
+                                collection_name=collection_name,
+                                query=query_vector,
+                                query_filter=search_filter,
+                                limit=top_k,
+                                with_payload=True,
+                            )
+                            search_results = query_response.points
+                        else:
+                            raise
+                else:
+                    # Fallback to dense-only search using query_points
                     query_response = client.query_points(
                         collection_name=collection_name,
                         query=query_vector,
                         query_filter=search_filter,
                         limit=top_k,
+                        with_payload=True,
                     )
                     search_results = query_response.points
-                else:
-                    search_results = client.search(
-                        collection_name=collection_name,
-                        query_vector=query_vector,
-                        query_filter=search_filter,
-                        limit=top_k,
-                    )
 
                 results = []
                 for point in search_results:

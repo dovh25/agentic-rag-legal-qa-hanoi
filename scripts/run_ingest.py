@@ -152,7 +152,7 @@ async def build_corpus(args: argparse.Namespace) -> int:
     if not indexer.recreate_versioned_collection(args.target_collection):
         return 2
     indexer.collection_name = args.target_collection
-    indexed = indexer.index_chunks(all_chunks)
+    indexed = await indexer.index_chunks(all_chunks)
     if indexed != len(all_chunks):
         logger.error("Indexed %d/%d chunks; refusing promotion.", indexed, len(all_chunks))
         return 2

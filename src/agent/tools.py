@@ -16,7 +16,7 @@ def get_retriever() -> HybridRetriever:
     return _retriever
 
 
-def retrieve_legal_documents(
+async def retrieve_legal_documents(
     query: str,
     as_of_date: str | None = None,
     district: str | None = None,
@@ -37,7 +37,7 @@ def retrieve_legal_documents(
         f"Retrieving legal docs for query='{query}', district='{district}', as_of_date='{as_of_date}', limit={limit}"
     )
     retriever = get_retriever()
-    results = retriever.retrieve(
+    results = await retriever.retrieve(
         query=query,
         as_of_date=as_of_date,
         district=district,

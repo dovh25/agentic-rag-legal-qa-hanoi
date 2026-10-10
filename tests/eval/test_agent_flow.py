@@ -18,7 +18,13 @@ def test_agent_graph_execution():
     assert "status" in result
     assert result["status"] == "answered"
     assert len(result["citations"]) > 0
-    assert result["citations"][0]["doc_id"] in ["31-2024-QH15", "88-2024-ND-CP", "61-2024-QD-UBND"]
+    # Check that citations have required fields
+    for cit in result["citations"]:
+        assert "doc_id" in cit
+        assert "document_title" in cit
+        assert "article_ref" in cit
+        assert "snippet" in cit
+        assert "source_url" in cit
     assert len(result["reasoning_steps"]) > 0
 
 

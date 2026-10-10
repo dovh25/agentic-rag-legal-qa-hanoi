@@ -2,7 +2,7 @@
 
 > **Hệ thống hỏi đáp pháp luật đất đai, quy hoạch, thu hồi đất, bồi thường và tái định cư tại Thành phố Hà Nội**  
 > Kiến trúc: **Agentic RAG (LangGraph + FastAPI + Qdrant + BGE-M3 + BM25)**  
-> Bộ tài liệu định hướng chuẩn mực: [docs/PRD.md](docs/PRD.md) · [docs/Brief.md](docs/Brief.md) · [docs/Wireframe_UI_Flow.md](docs/Wireframe_UI_Flow.md)
+> Bộ tài liệu định hướng chuẩn mực: [docs/PRD.md](docs/PRD.md) · [docs/Brief.md](docs/Brief.md) · [docs/Wireframe_UI_Flow.md](docs/Wireframe_UI_Flow.md) · [RUNBOOK.md](RUNBOOK.md)
 
 ---
 
@@ -47,32 +47,46 @@ Hệ thống Agentic RAG chuyên sâu phục vụ tra cứu, diễn giải và �
 ## 3. Technology Stack & Directory Structure
 
 - **Ngôn ngữ & Runtime**: Python 3.11+
-- **LLM Inference Engine**: Google Gemini API (`gemini-3.8-flash` qua OpenAI-compatible protocol - Free Tier)
-- **Embedding Model**: `BAAI/bge-m3` (1024-dim dense + BM25 sparse lexical weights - Local/Free)
+- **LLM Inference Engine**: Groq API (`llama-3.3-70b-versatile` qua OpenAI-compatible protocol - Free Tier)
+- **Embedding Model**: `BAAI/bge-m3` qua **Hugging Face Inference API** (GPU-accelerated, Free Tier) với **Redis Cache** (TTL 30 ngày)
 - **API Framework**: FastAPI, Pydantic v2, Uvicorn
 - **Agent Orchestration**: LangGraph 0.2+, LangChain Core
-- **Vector Store & Hybrid Retrieval**: Qdrant (collection: `legal_chunks`, HNSW cosine, payload indexes)
+- **Vector Store & Hybrid Retrieval**: Qdrant (collection: `legal_chunks`, HNSW cosine, dense 1024-dim + sparse BM25, payload indexes)
 - **Data Acquisition**: Automated Crawler từ Cổng VBPL Chính phủ & Công báo Hà Nội
-- **Architecture Decisions**: Tài liệu hóa chi tiết tại `docs/adr/` (ADR-0001 đến ADR-0004)
-- **Frontend Specification**: React / Next.js theo [docs/Wireframe_UI_Flow.md](docs/Wireframe_UI_Flow.md) (Palette: Deep Navy `#1B4F72`, Accent Orange `#E67E22`)
+- **Monitoring**: Prometheus + Grafana (metrics: latency P50/P95, query rate, error rate, query distribution)
+- **Architecture Decisions**: Tài liệu hóa chi tiết tại `docs/adr/` (ADR-0001 đến ADR-0007)
+- **Frontend**: Next.js 14 + React 18 ChatGPT-style chatbot (IndexedDB history, SSE streaming, dark/light mode)
 - **Code Quality & Formatting**: Ruff (line-length = 88, py311), Pytest (unit, integration, eval)
-- **Infrastructure**: Docker, Docker Compose
+- **Infrastructure**: Docker, Docker Compose (API + Qdrant + Redis + Prometheus + Grafana)
 
 ```text
 agentic-rag-legal-qa-hanoi/
 ├── docs/                     # PRD, Brief, Wireframe_UI_Flow, ADR, Architecture specs
 ├── eval/                     # Evaluation datasets & benchmark scripts
 │   ├── datasets/             # Sample & gold standard questions (JSONL)
-│   └── scripts/              # run_eval.py and metric calculation
+│   └── scripts/              # run_eval.py, security_audit.py, run_ragas_eval.py
+├── monitoring/               # Prometheus + Grafana config
+│   ├── prometheus.yml
+│   └── grafana/
+├── scripts/                  # Operational scripts
+│   ├── run_ingest.py         # Corpus ingestion & indexing
+│   ├── security_audit.py     # Prompt injection testing
+│   ├── load_test.js          # k6 load test script
+│   └── run_ragas_eval.py     # RAGAS evaluation
 ├── src/
 │   ├── agent/                # LangGraph state, nodes (router, planner, retrieval, grader, synthesize, verify, clarification)
-│   ├── api/                  # FastAPI app, routes (POST /query, GET /health, POST /feedback)
+│   ├── api/                  # FastAPI app, routes, metrics (Prometheus)
 │   ├── core/                 # App configuration & structured logging (Loguru)
+│   ├── embedding/            # HF Inference API client + Redis cache
+│   ├── ingest/               # Crawler, parser, chunker, indexer, validation
 │   └── models/               # Pydantic request/response schemas
 ├── tests/                    # Unit, integration, and agent flow tests
+├── web/                      # Next.js 14 Frontend (ChatGPT-style)
 ├── .agents/                  # Antigravity Workspace Customizations
 │   └── skills/               # Project-specific workflows (ingest, eval, agent-dev)
 ├── Makefile                  # Automation shortcuts (dev, lint, test, eval, docker)
+├── docker-compose.monitoring.yml  # Full monitoring stack
+├── RUNBOOK.md                # Operations runbook
 └── ruff.toml                 # Linting and formatting rules
 ```
 

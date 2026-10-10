@@ -11,7 +11,13 @@ from urllib.parse import urljoin
 import httpx
 from bs4 import BeautifulSoup
 from pypdf import PdfReader
-from rapidocr_onnxruntime import RapidOCR
+
+try:
+    from rapidocr_onnxruntime import RapidOCR
+    HAS_RAPIDOCR = True
+except ImportError:
+    RapidOCR = None
+    HAS_RAPIDOCR = False
 
 from src.core.logging import logger
 
@@ -177,7 +183,11 @@ class LegalCrawler:
         self.storage_dir = Path(storage_dir)
         self.storage_dir.mkdir(parents=True, exist_ok=True)
         self.manifest_path = self.storage_dir / "manifest.json"
-        self._ocr = RapidOCR()
+        if HAS_RAPIDOCR:
+            self._ocr = RapidOCR()
+        else:
+            self._ocr = None
+            logger.warning("RapidOCR not available, OCR functionality disabled")
 
     async def fetch_document(
         self, source: DocumentSource, client: httpx.AsyncClient
@@ -336,6 +346,10 @@ class LegalCrawler:
         return "\n\n".join(page for page in pages if page)
 
     def _ocr_pdf_text(self, pdf_path: Path) -> str:
+        if not HAS_RAPIDOCR or self._ocr is None:
+            logger.warning("RapidOCR not available, skipping OCR")
+            return ""
+        
         import pypdfium2 as pdfium
 
         document = pdfium.PdfDocument(str(pdf_path))
