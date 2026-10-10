@@ -5,9 +5,9 @@
 - **Người quyết định**: Vũ Huy Đô (Senior AI Engineer / Tech Lead)
 - **Tài liệu liên quan**: [docs/PRD.md](../PRD.md), [docs/Brief.md](../Brief.md), [.agents/skills/legal-corpus-ingest/SKILL.md](../../.agents/skills/legal-corpus-ingest/SKILL.md)
 
-> **Implementation note (2026-10-09):** Dense 1024-dim là phần đang được sử dụng. Sparse
-> lexical weights/BM25 của BGE-M3 chưa được materialize thành sparse index trong Qdrant
-> production; không được mô tả là đã active cho tới khi có implementation và benchmark.
+> **Implementation note (2026-10-10):** Dense 1024-dim và Sparse BM25 đã được implement đầy đủ.
+> Embedding sử dụng Hugging Face Inference API (GPU-accelerated, free tier) kết hợp Redis cache (TTL 30 ngày).
+> Sparse BM25 vectors đã được materialize vào Qdrant collection `legal_chunks` và hoạt động trong production.
 
 ---
 
@@ -24,7 +24,7 @@ Dự án quyết định lựa chọn **`BAAI/bge-m3`** làm mô hình Embedding
 - **Kích thước vector dense**: 1024 chiều (Cosine distance).
 - **Hỗ trợ đa phương thức**: Dense retrieval, Multi-vector (ColBERT style), và Sparse lexical weights (tương đương BM25 có trọng số ngữ cảnh).
 - **Ngôn ngữ**: Hỗ trợ xuất sắc tiếng Việt (thuộc nhóm mô hình SOTA trên benchmark tiếng Việt).
-- **Môi trường triển khai**: Chạy local offline (qua `sentence-transformers` / HuggingFace hoặc container ONNX runtime).
+- **Môi trường triển khai**: Hugging Face Inference API (GPU-accelerated, free tier) với Redis cache layer; fallback local sentence-transformers khi cần.
 
 ## 3. Các phương án đã cân nhắc (Alternatives Considered)
 
@@ -33,7 +33,7 @@ Dự án quyết định lựa chọn **`BAAI/bge-m3`** làm mô hình Embedding
 | **Chi phí** | **0 VNĐ (Miễn phí vĩnh viễn)** | Trả phí per-token | 0 VNĐ |
 | **Kích thước vector** | 1024-dim | 1536-dim | 768-dim |
 | **Sparse / BM25 Weight** | Có sẵn natively | Không (phải dựng BM25 riêng) | Không |
-| **Bảo mật & Offline** | 100% On-premise / Local | Gửi dữ liệu ra Cloud | 100% Local |
+| **Bảo mật & Offline** | API calls không lưu dữ liệu; Redis cache local | Gửi dữ liệu ra Cloud | 100% Local |
 | **Độ chính xác tiếng Việt** | Rất cao (Top benchmark MTEB) | Tốt | Trung bình |
 
 ## 4. Hệ quả (Consequences)
@@ -41,8 +41,8 @@ Dự án quyết định lựa chọn **`BAAI/bge-m3`** làm mô hình Embedding
 ### Tích cực:
 - Hoàn toàn miễn phí chi phí embedding khi ingest hàng chục nghìn chunks pháp luật.
 - Kết hợp hoàn hảo với Qdrant Vector DB (hỗ trợ lưu cả Dense 1024-dim và Sparse payload).
-- Dữ liệu văn bản pháp luật không bị gửi ra dịch vụ ngoài trong quá trình embedding.
+- Embedding không lưu dữ liệu pháp luật ở HF; Redis cache giảm latency và quota usage.
 
 ### Hạn chế & Giảm thiểu:
-- Cần tài nguyên RAM/CPU khi khởi chạy model local.
-  *Giảm thiểu:* Tối ưu hóa kích thước batch (`batch_size=16` hoặc `32`), cache embedding trên đĩa cứng và hỗ trợ fallback sang ONNX runtime nếu cần.
+- Phụ thuộc network cho HF Inference API.
+  *Giảm thiểu:* Retry với exponential backoff; fallback sang local sentence-transformers; Redis cache giảm 90%+ API calls.

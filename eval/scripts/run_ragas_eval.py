@@ -12,7 +12,6 @@ Requires: ragas, datasets, and an LLM for evaluation (Groq/OpenAI compatible).
 
 import asyncio
 import json
-import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -31,6 +30,7 @@ from ragas.metrics import (
     context_recall,
     faithfulness,
 )
+
 from src.agent.graph import create_agent_graph
 from src.core.config import get_settings
 from src.core.logging import logger
@@ -55,7 +55,7 @@ def load_golden_dataset(dataset_path: str = "eval/datasets/golden_questions.json
     if not path.exists():
         logger.error(f"Dataset not found at {dataset_path}")
         return []
-    
+
     data = []
     with open(path, encoding="utf-8") as f:
         for line in f:
@@ -70,40 +70,40 @@ async def prepare_ragas_dataset(golden_data: list[dict], max_samples: int = 50) 
     answers = []
     contexts = []
     ground_truths = []
-    
+
     for i, item in enumerate(golden_data[:max_samples]):
         logger.info(f"Processing {i+1}/{min(len(golden_data), max_samples)}: {item['id']}")
-        
+
         try:
             result = await run_agent_query(
                 query=item["query"],
                 as_of_date=item.get("as_of_date"),
                 district=item.get("district"),
             )
-            
+
             # Extract contexts from citations
             retrieved_contexts = []
             for cit in result.get("citations", []):
                 ctx = f"{cit.get('document_title', '')} - {cit.get('article_ref', '')} {cit.get('clause', '')}: {cit.get('snippet', '')}"
                 retrieved_contexts.append(ctx)
-            
+
             # Ground truth from gold citations
             gold_contexts = []
             for doc_id in item.get("gold_doc_ids", []):
                 gold_contexts.append(f"Expected document: {doc_id}")
-            
+
             questions.append(item["query"])
             answers.append(result.get("answer", ""))
             contexts.append(retrieved_contexts)
             ground_truths.append(gold_contexts)
-            
+
         except Exception as e:
             logger.error(f"Error processing {item['id']}: {e}")
             questions.append(item["query"])
             answers.append("")
             contexts.append([])
             ground_truths.append([])
-    
+
     # Create HuggingFace Dataset
     dataset_dict = {
         "question": questions,
@@ -111,14 +111,14 @@ async def prepare_ragas_dataset(golden_data: list[dict], max_samples: int = 50) 
         "contexts": contexts,
         "ground_truth": ground_truths,
     }
-    
+
     return Dataset.from_dict(dataset_dict)
 
 
 def run_ragas_evaluation(dataset: Dataset) -> dict:
     """Run RAGAS evaluation on the dataset."""
     settings = get_settings()
-    
+
     # Use Groq for RAGAS LLM judge
     if not settings.OPENAI_API_KEY:
         logger.warning("No OPENAI_API_KEY set, using mock evaluation")
@@ -129,14 +129,14 @@ def run_ragas_evaluation(dataset: Dataset) -> dict:
             "context_precision": 0.0,
             "note": "Mock evaluation - no LLM judge configured"
         }
-    
+
     # Configure Groq LLM for RAGAS
     eval_llm = ChatGroq(
         groq_api_key=settings.OPENAI_API_KEY,
         model_name=settings.MODEL_NAME,
         temperature=0,
     )
-    
+
     # Define metrics
     metrics = [
         faithfulness,
@@ -144,7 +144,7 @@ def run_ragas_evaluation(dataset: Dataset) -> dict:
         context_recall,
         context_precision,
     ]
-    
+
     # Run evaluation
     logger.info("Running RAGAS evaluation...")
     results = evaluate(
@@ -152,34 +152,34 @@ def run_ragas_evaluation(dataset: Dataset) -> dict:
         metrics=metrics,
         llm=eval_llm,
     )
-    
+
     return results.to_pandas().mean().to_dict()
 
 
 async def main():
     """Main evaluation pipeline."""
     logger.info("Starting RAGAS evaluation pipeline")
-    
+
     # Load golden dataset
     golden_data = load_golden_dataset()
     if not golden_data:
         logger.error("No golden dataset found")
         return 1
-    
+
     logger.info(f"Loaded {len(golden_data)} golden questions")
-    
+
     # Prepare RAGAS dataset
     dataset = await prepare_ragas_dataset(golden_data, max_samples=50)
     logger.info(f"Prepared dataset with {len(dataset)} samples")
-    
+
     # Run RAGAS evaluation
     results = run_ragas_evaluation(dataset)
-    
+
     # Print results
     logger.info("=== RAGAS Evaluation Results ===")
     for metric, value in results.items():
         logger.info(f"{metric}: {value:.4f}")
-    
+
     # Check against thresholds
     thresholds = {
         "faithfulness": 0.90,
@@ -187,7 +187,7 @@ async def main():
         "context_recall": 0.85,
         "context_precision": 0.80,
     }
-    
+
     passed = True
     for metric, threshold in thresholds.items():
         value = results.get(metric, 0)
@@ -195,14 +195,14 @@ async def main():
         if value < threshold:
             passed = False
         logger.info(f"{metric}: {value:.4f} (threshold: {threshold}) - {status}")
-    
+
     # Save results
     output_path = Path("eval/results/ragas_results.json")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w") as f:
         json.dump(results, f, indent=2, ensure_ascii=False)
     logger.info(f"Results saved to {output_path}")
-    
+
     return 0 if passed else 1
 
 

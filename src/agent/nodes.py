@@ -155,7 +155,7 @@ def planner_node(state: AgentState) -> dict[str, Any]:
 def retrieval_node(state: AgentState) -> dict[str, Any]:
     """Execute hybrid retrieval for query or sub-queries with deduplication."""
     import asyncio
-    
+
     steps = list(state.get("reasoning_steps", []))
     as_of_date = state.get("as_of_date_applied")
     district = state.get("district")
@@ -172,7 +172,7 @@ def retrieval_node(state: AgentState) -> dict[str, Any]:
         except RuntimeError:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-        
+
         docs = loop.run_until_complete(
             retrieve_legal_documents(
                 query=q,
@@ -411,12 +411,13 @@ def synthesize_node(state: AgentState) -> dict[str, Any]:
                 messages=[
                     {
                         "role": "system",
-                        "content": "Bạn là chuyên gia tư vấn pháp luật đất đai và quy hoạch TP. Hà Nội. Trả lời chính xác, trung thực dựa trên tài liệu pháp lý được cung cấp.",
+                        "content": "Bạn là chuyên gia tư vấn pháp luật đất đai và quy hoạch TP. Hà Nội. Trả lời chính xác, trung thực, súc tích dựa trên tài liệu pháp lý được cung cấp. Chỉ sử dụng thông tin từ các căn cứ pháp lý được cung cấp. Không tự tạo ra thông tin pháp lý.",
                     },
                     {"role": "user", "content": prompt},
                 ],
-                temperature=0.1,
-                max_tokens=800,
+                temperature=settings.GPT_OSS_TEMPERATURE,
+                max_tokens=settings.GPT_OSS_MAX_TOKENS,
+                top_p=settings.GPT_OSS_TOP_P,
             )
             llm_answer = response.choices[0].message.content
             logger.info("Successfully synthesized answer using LLM inference")

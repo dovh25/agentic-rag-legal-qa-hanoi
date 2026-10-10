@@ -53,7 +53,7 @@ LOG_LEVEL="INFO"
 LLM_PROVIDER="groq"
 OPENAI_API_KEY="gsk_your_groq_key"
 OPENAI_BASE_URL="https://api.groq.com/openai/v1"
-MODEL_NAME="llama-3.3-70b-versatile"
+MODEL_NAME="openai/gpt-oss-20b"
 
 # Embeddings (Hugging Face Inference API - Free GPU)
 HUGGINGFACE_API_KEY="hf_your_hf_token"

@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, status
 from fastapi.responses import StreamingResponse
 
 from src.api.deps import get_agent_graph
-from src.api.metrics import QUERY_LATENCY, QUERY_COUNT
+from src.api.metrics import QUERY_COUNT, QUERY_LATENCY
 from src.core.config import get_settings
 from src.core.logging import logger
 from src.models.schemas import (

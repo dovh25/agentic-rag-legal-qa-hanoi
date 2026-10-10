@@ -1,8 +1,9 @@
 import time
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 from fastapi.responses import Response
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from src.api.metrics import REQUEST_COUNT, REQUEST_LATENCY
 from src.api.routes.qa import router as qa_router
@@ -35,7 +36,7 @@ async def prometheus_middleware(request: Request, call_next):
     start_time = time.time()
     response = await call_next(request)
     duration = time.time() - start_time
-    
+
     REQUEST_COUNT.labels(
         method=request.method,
         endpoint=request.url.path,
@@ -45,7 +46,7 @@ async def prometheus_middleware(request: Request, call_next):
         method=request.method,
         endpoint=request.url.path,
     ).observe(duration)
-    
+
     return response
 
 # Register API routers

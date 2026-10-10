@@ -1,6 +1,6 @@
 # ADR-0007: Groq as the OpenAI-compatible LLM provider
 
-- **Status**: Accepted for validation
+- **Status**: Accepted
 - **Supersedes**: ADR-0006 as the active provider default
 
 ## Decision
@@ -8,7 +8,7 @@
 Use Groq's OpenAI-compatible API for the default synthesis runtime:
 
 - Base URL: `https://api.groq.com/openai/v1`
-- Default model: `llama-3.3-70b-versatile`
+- Default model: `openai/gpt-oss-20b`
 - Secret: `OPENAI_API_KEY`, injected only through local secret management or Render
 
 The generic `OPENAI_*` names are retained because the application uses the OpenAI

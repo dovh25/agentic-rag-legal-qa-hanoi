@@ -1,20 +1,16 @@
-import asyncio
 import hashlib
-import json
-import logging
-from typing import Any
 
 import httpx
 from tenacity import (
     retry,
+    retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
-    retry_if_exception_type,
 )
 
 from src.core.config import get_settings
 from src.core.logging import logger
-from src.embedding.cache import EmbeddingCache, get_embedding_cache
+from src.embedding.cache import get_embedding_cache
 
 
 class HFEmbeddingClient:

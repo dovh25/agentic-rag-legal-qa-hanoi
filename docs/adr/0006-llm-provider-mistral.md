@@ -22,3 +22,5 @@ OpenAI-compatible protocol. `LLM_PROVIDER=mistral` makes deployment intent expli
 - A different OpenAI-compatible provider can be restored by changing provider, base URL and
   model together, followed by the same smoke/evaluation gate.
 - A key exposed outside an approved secret store must be revoked and rotated before use.
+
+> **Note:** Superseded by ADR-0007 (Groq) which is now the active production provider.
