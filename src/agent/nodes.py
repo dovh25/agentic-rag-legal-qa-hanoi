@@ -154,6 +154,8 @@ def planner_node(state: AgentState) -> dict[str, Any]:
 
 def retrieval_node(state: AgentState) -> dict[str, Any]:
     """Execute hybrid retrieval for query or sub-queries with deduplication."""
+    import asyncio
+    
     steps = list(state.get("reasoning_steps", []))
     as_of_date = state.get("as_of_date_applied")
     district = state.get("district")
@@ -164,11 +166,20 @@ def retrieval_node(state: AgentState) -> dict[str, Any]:
     seen_keys: set[tuple[str, str | None, str | None]] = set()
 
     for q in queries_to_search:
-        docs = retrieve_legal_documents(
-            query=q,
-            as_of_date=as_of_date,
-            district=district,
-            limit=settings.MAX_RETRIEVAL_RESULTS,
+        # Run async retrieve in sync context
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        
+        docs = loop.run_until_complete(
+            retrieve_legal_documents(
+                query=q,
+                as_of_date=as_of_date,
+                district=district,
+                limit=settings.MAX_RETRIEVAL_RESULTS,
+            )
         )
         for d in docs:
             key = (

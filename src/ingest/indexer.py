@@ -1,11 +1,16 @@
 import uuid
+from collections import Counter
+import re
+from functools import lru_cache
 
 from qdrant_client import QdrantClient
 from qdrant_client.http import models as qmodels
+from qdrant_client.models import SparseVector
 
 from src.core.config import get_settings
 from src.core.logging import logger
 from src.ingest.chunker import LegalChunk
+from src.embedding.hf_client import get_hf_embedding_client
 
 
 class QdrantLegalIndexer:
@@ -51,21 +56,26 @@ class QdrantLegalIndexer:
         return self.client
 
     def ensure_collection(self) -> bool:
-        """Ensure collection exists with Cosine distance and payload indexes."""
+        """Ensure collection exists with dense + sparse vectors and payload indexes."""
         try:
             client = self.connect()
             collections = [c.name for c in client.get_collections().collections]
 
             if self.collection_name not in collections:
                 logger.info(
-                    f"Creating Qdrant collection '{self.collection_name}' (dim={self.vector_dim}, metric=Cosine)"
+                    f"Creating Qdrant collection '{self.collection_name}' (dense_dim={self.vector_dim}, sparse=BM25, metric=Cosine)"
                 )
                 client.create_collection(
                     collection_name=self.collection_name,
-                    vectors_config=qmodels.VectorParams(
-                        size=self.vector_dim,
-                        distance=qmodels.Distance.COSINE,
-                    ),
+                    vectors_config={
+                        "": qmodels.VectorParams(
+                            size=self.vector_dim,
+                            distance=qmodels.Distance.COSINE,
+                        ),
+                    },
+                    sparse_vectors_config={
+                        "text": qmodels.SparseVectorParams()
+                    },
                 )
 
                 # Create Payload Indexes for fast metadata filtering (ADR-0004)
@@ -133,25 +143,33 @@ class QdrantLegalIndexer:
         )
         client.update_collection_aliases(change_aliases_operations=actions)
 
-    def generate_embeddings(self, texts: list[str]) -> list[list[float]]:
-        """Generate dense BGE-M3 embeddings, failing closed outside explicit test mode."""
-        # Try importing sentence_transformers for local BGE-M3 (ADR-0001)
-        try:
-            import torch
-            from sentence_transformers import SentenceTransformer
+    async def generate_embeddings(self, texts: list[str]) -> list[list[float]]:
+        """Generate dense BGE-M3 embeddings using HF Inference API with Redis cache."""
+        settings = get_settings()
 
-            model = SentenceTransformer("BAAI/bge-m3")
-            torch.set_num_threads(min(32, torch.get_num_threads()))
-            model.max_seq_length = 64
+        if settings.USE_HF_EMBEDDING_API and settings.HUGGINGFACE_API_KEY:
+            try:
+                hf_client = get_hf_embedding_client()
+                embeddings = await hf_client.embed(texts, use_cache=True)
+                logger.info(f"Generated {len(embeddings)} embeddings via HF API (with cache)")
+                return embeddings
+            except Exception as e:
+                logger.warning(f"HF embedding API failed: {e}. Falling back to local model.")
+        else:
+            logger.info("HF embedding API not configured, using local sentence-transformers")
+
+        # Fallback to local sentence-transformers
+        try:
+            model = self._get_embedding_model()
             vectors = model.encode(
                 texts,
-                batch_size=128,
+                batch_size=64,
                 normalize_embeddings=True,
                 show_progress_bar=True,
+                convert_to_numpy=True,
             )
             return [v.tolist() for v in vectors]
         except Exception as e:
-            settings = get_settings()
             if not settings.ALLOW_MOCK_EMBEDDINGS:
                 raise RuntimeError(
                     "BGE-M3 is unavailable; refusing to generate production embeddings. "
@@ -164,7 +182,6 @@ class QdrantLegalIndexer:
             import hashlib
             import math
 
-            # Deterministic reproducible 1024-dim pseudo-embeddings for development & test suites
             embeddings: list[list[float]] = []
             for text in texts:
                 vec: list[float] = []
@@ -172,14 +189,58 @@ class QdrantLegalIndexer:
                     h = hashlib.sha256(f"{text}-{i}".encode()).hexdigest()
                     val = (int(h[:8], 16) / 0xFFFFFFFF) * 2 - 1.0
                     vec.append(val)
-                # Normalize vector to unit length
                 norm = math.sqrt(sum(x * x for x in vec)) or 1.0
                 vec = [x / norm for x in vec]
                 embeddings.append(vec)
             return embeddings
 
-    def index_chunks(self, chunks: list[LegalChunk], batch_size: int = 64) -> int:
-        """Batch index chunks into Qdrant collection."""
+    @lru_cache(maxsize=1)
+    def _get_embedding_model(self):
+        """Get cached BGE-M3 embedding model (local fallback)."""
+        import torch
+        from sentence_transformers import SentenceTransformer
+
+        model = SentenceTransformer("BAAI/bge-m3")
+        torch.set_num_threads(min(32, torch.get_num_threads()))
+        model.max_seq_length = 512
+        return model
+
+    def _build_sparse_vector(self, text: str) -> SparseVector:
+        """Build BM25 sparse vector for document text with unique indices."""
+        # Simple tokenization
+        tokens = re.findall(r'\b\w+\b', text.lower())
+        stop_words = {"và", "của", "các", "cho", "về", "thì", "là", "ở", "tại", "theo",
+                      "được", "có", "những", "này", "đó", "ra", "vào", "lại", "nào",
+                      "gì", "sao", "thế", "công", "gia", "nhất", "như", "nếu", "để",
+                      "do", "thức", "ngon", "truyền", "cách", "làm", "ngày", "tết"}
+        tokens = [t for t in tokens if t not in stop_words and len(t) > 1]
+        
+        tf = Counter(tokens)
+        if not tf:
+            return SparseVector(indices=[], values=[])
+        
+        # Use deterministic hash-based indexing with collision handling
+        # Use a consistent hash function to avoid Python's hash randomization
+        import hashlib
+        term_to_idx = {}
+        used_indices = set()
+        for term in tf:
+            # Use MD5 hash for deterministic, collision-resistant indexing
+            h = hashlib.md5(term.encode()).hexdigest()
+            idx = int(h[:8], 16) % 1000000
+            # Handle collisions - check against used_indices, not term_to_idx keys
+            while idx in used_indices:
+                idx = (idx + 1) % 1000000
+            term_to_idx[term] = idx
+            used_indices.add(idx)
+        
+        indices = [term_to_idx[term] for term in tf]
+        values = [float(tf[term]) for term in tf]
+        
+        return SparseVector(indices=indices, values=values)
+
+    async def index_chunks(self, chunks: list[LegalChunk], batch_size: int = 64) -> int:
+        """Batch index chunks into Qdrant collection with dense + sparse vectors."""
         if not chunks:
             return 0
 
@@ -191,12 +252,16 @@ class QdrantLegalIndexer:
 
         total_indexed = 0
         texts = [chunk.text for chunk in chunks]
-        embeddings = self.generate_embeddings(texts)
+        embeddings = await self.generate_embeddings(texts)
 
         points: list[qmodels.PointStruct] = []
         for i, chunk in enumerate(chunks):
             # Deterministic UUID from chunk_id
             point_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, chunk.chunk_id))
+            
+            # Generate sparse vector for this chunk
+            sparse_vector = self._build_sparse_vector(chunk.text)
+            
             payload = {
                 **chunk.metadata,
                 "text": chunk.text,
@@ -207,7 +272,10 @@ class QdrantLegalIndexer:
             points.append(
                 qmodels.PointStruct(
                     id=point_id,
-                    vector=embeddings[i],
+                    vector={
+                        "": embeddings[i],  # default dense vector
+                        "text": sparse_vector,  # sparse vector for BM25
+                    },
                     payload=payload,
                 )
             )
